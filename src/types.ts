@@ -78,7 +78,7 @@ export const ZERO_USAGE = Object.freeze({
   cacheCreationInputTokens: 0,
 }) satisfies ZeroUsage;
 
-export type StopReason = "end_turn" | "tool_use" | "length" | "unknown";
+export type StopReason = "end_turn" | "tool_use" | "max_tokens" | "unknown";
 
 export type GatewayResponse = {
   readonly model: ModelId;

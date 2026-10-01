@@ -1,0 +1,79 @@
+[
+  {
+    "request": {
+      "url": "https://api.anthropic.com/v1/messages",
+      "method": "POST",
+      "body": {
+        "model": "claude-haiku-4-5",
+        "max_tokens": 1024,
+        "messages": [
+          { "role": "user", "content": "Find order ORD-4471." }
+        ],
+        "system": "Use tools when appropriate.",
+        "tools": [
+          {
+            "name": "get_order",
+            "description": "Look up an order.",
+            "input_schema": {
+              "type": "object",
+              "properties": { "orderId": { "type": "string" } },
+              "required": ["orderId"],
+              "additionalProperties": false
+            },
+            "strict": true,
+            "cache_control": { "type": "ephemeral", "ttl": "5m" }
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "msg_recorded_anthropic",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-haiku-4-5-20251001",
+        "content": [
+          { "type": "text", "text": "I'll look that up." },
+          {
+            "type": "tool_use",
+            "id": "toolu_order_1",
+            "name": "get_order",
+            "input": { "orderId": "ORD-4471" }
+          }
+        ],
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 763,
+          "output_tokens": 116,
+          "cache_creation_input_tokens": 64,
+          "cache_read_input_tokens": 32,
+          "output_tokens_details": { "thinking_tokens": 16 }
+        }
+      }
+    }
+  },
+  {
+    "request": {
+      "url": "https://api.anthropic.com/v1/messages",
+      "method": "POST",
+      "body": {
+        "model": "claude-haiku-4-5",
+        "max_tokens": 16,
+        "messages": []
+      }
+    },
+    "response": {
+      "status": 400,
+      "headers": { "request-id": "req_anthropic_invalid" },
+      "body": {
+        "type": "error",
+        "error": {
+          "type": "invalid_request_error",
+          "message": "messages: at least one message is required"
+        }
+      }
+    }
+  }
+]

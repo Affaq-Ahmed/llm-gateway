@@ -1,0 +1,93 @@
+[
+  {
+    "request": {
+      "url": "https://api.openai.com/v1/chat/completions",
+      "method": "POST",
+      "body": {
+        "model": "gpt-5-mini",
+        "messages": [
+          { "role": "system", "content": "Use tools when appropriate." },
+          { "role": "user", "content": "Find order ORD-4471." }
+        ],
+        "max_completion_tokens": 4000,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "get_order",
+              "description": "Look up an order.",
+              "parameters": {
+                "type": "object",
+                "properties": { "orderId": { "type": "string" } },
+                "required": ["orderId"],
+                "additionalProperties": false
+              },
+              "strict": true
+            }
+          }
+        ]
+      }
+    },
+    "response": {
+      "status": 200,
+      "body": {
+        "id": "chatcmpl_recorded_openai",
+        "object": "chat.completion",
+        "created": 1788963001,
+        "model": "gpt-5-mini-2025-08-07",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "tool_calls": [
+                {
+                  "id": "call_order_1",
+                  "type": "function",
+                  "function": {
+                    "name": "get_order",
+                    "arguments": "{\"orderId\":\"ORD-4471\"}"
+                  }
+                }
+              ]
+            },
+            "finish_reason": "tool_calls",
+            "logprobs": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 225,
+          "completion_tokens": 187,
+          "total_tokens": 412,
+          "prompt_tokens_details": { "cached_tokens": 32 },
+          "completion_tokens_details": { "reasoning_tokens": 128 }
+        }
+      }
+    }
+  },
+  {
+    "request": {
+      "url": "https://api.openai.com/v1/chat/completions",
+      "method": "POST",
+      "body": {
+        "model": "gpt-5-mini",
+        "messages": [],
+        "max_completion_tokens": 4000
+      }
+    },
+    "response": {
+      "status": 400,
+      "headers": { "x-request-id": "req_openai_invalid" },
+      "body": {
+        "error": {
+          "message": "messages must contain at least one item",
+          "type": "invalid_request_error",
+          "param": "messages",
+          "code": null
+        }
+      }
+    }
+  }
+]

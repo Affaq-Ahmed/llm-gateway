@@ -27,8 +27,13 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
+    "@types/node": "^26.6.3",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2",
     "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "openai": "^7.25.0"
   }
 }
