@@ -6,7 +6,6 @@ import type {
   ModelId,
   StreamEvent,
   Usage,
-  ZeroUsage,
 } from "./types.js";
 
 describe("public gateway types", () => {
@@ -43,7 +42,7 @@ describe("public gateway types", () => {
     expectTypeOf<GatewayResponse>().toMatchTypeOf<{ attempts: number }>();
     expectTypeOf<GatewayResponse>().toMatchTypeOf<{ failedOver: boolean }>();
     expectTypeOf<Extract<StreamEvent, { type: "error" }>["usage"]>()
-      .toEqualTypeOf<ZeroUsage>();
+      .toEqualTypeOf<Usage>();
     expect(response.usage.totalTokens).toBe(13);
   });
 

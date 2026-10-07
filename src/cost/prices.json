@@ -1,0 +1,50 @@
+{
+  "claude-sonnet-4-5": [
+    {
+      "effectiveFrom": "2025-09-29T00:00:00.000Z",
+      "inputPerMTok": 3,
+      "outputPerMTok": 15,
+      "cacheWrite5m": 3.75,
+      "cacheWrite1h": 6,
+      "cacheRead": 0.3
+    }
+  ],
+  "claude-sonnet-5": [
+    {
+      "effectiveFrom": "2026-01-01T00:00:00.000Z",
+      "inputPerMTok": 2,
+      "outputPerMTok": 10,
+      "cacheWrite5m": 2.5,
+      "cacheWrite1h": 4,
+      "cacheRead": 0.2
+    },
+    {
+      "effectiveFrom": "2026-09-01T00:00:00.000Z",
+      "inputPerMTok": 3,
+      "outputPerMTok": 15,
+      "cacheWrite5m": 3.75,
+      "cacheWrite1h": 6,
+      "cacheRead": 0.3
+    }
+  ],
+  "claude-haiku-4-5": [
+    {
+      "effectiveFrom": "2025-10-15T00:00:00.000Z",
+      "inputPerMTok": 1,
+      "outputPerMTok": 5,
+      "cacheWrite5m": 1.25,
+      "cacheWrite1h": 2,
+      "cacheRead": 0.1
+    }
+  ],
+  "gpt-5-mini": [
+    {
+      "effectiveFrom": "2025-08-07T00:00:00.000Z",
+      "inputPerMTok": 0.25,
+      "outputPerMTok": 2,
+      "cacheWrite5m": 0,
+      "cacheWrite1h": 0,
+      "cacheRead": 0.025
+    }
+  ]
+}

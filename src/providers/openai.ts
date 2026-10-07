@@ -23,6 +23,7 @@ import {
 import { observeResponseBytes } from "./stream-activity.js";
 import { timeoutFromSignal } from "../timeouts.js";
 import { STRUCTURED_TOOL_NAME } from "../structured.js";
+import { component, hasUsage, setBillable } from "../cost/billing.js";
 
 const REASONING_MIN_COMPLETION_TOKENS = 4_000;
 
@@ -156,6 +157,7 @@ async function* streamOpenAI(
   let ttftMs: number | null = null;
   let usage: Usage = ZERO_USAGE;
   let stopReason: StopReason = "unknown";
+  let providerCost: number | undefined;
   const tools = new Map<
     number,
     { id: string; name: string; argumentsJson: string }
@@ -174,7 +176,10 @@ async function* streamOpenAI(
     );
 
     for await (const chunk of stream) {
-      if (chunk.usage != null) usage = openAIUsage(chunk.usage);
+      if (chunk.usage != null) {
+        usage = openAIUsage(chunk.usage);
+        providerCost = costFromUsage(chunk.usage);
+      }
 
       const choice = chunk.choices[0];
       if (choice === undefined) continue;
@@ -217,7 +222,14 @@ async function* streamOpenAI(
         args: parseArguments(tool.argumentsJson),
       };
     }
-    yield { type: "done", stopReason, usage, ttftMs, attempts: 1 };
+    const done = {
+      type: "done" as const,
+      stopReason,
+      usage,
+      ttftMs,
+      attempts: 1,
+    };
+    yield setBillable(done, [component(provider, request.model, usage, 1, providerCost)]);
   } catch (error) {
     const timeout = timeoutFromSignal(signal);
     const mapped = timeout ?? (error instanceof GatewayError
@@ -225,7 +237,13 @@ async function* streamOpenAI(
       : error instanceof OpenAI.APIError
         ? toGatewayError(provider, error.status ?? null, error.headers, error)
         : toGatewayError(provider, null, undefined, error));
-    yield { type: "error", error: mapped, usage: ZERO_USAGE };
+    const event = { type: "error" as const, error: mapped, usage };
+    if (hasUsage(usage)) {
+      const billed = [component(provider, request.model, usage, 1, providerCost)];
+      setBillable(mapped, billed);
+      setBillable(event, billed);
+    }
+    yield event;
   } finally {
     controller.abort();
   }
@@ -368,7 +386,7 @@ function fromOpenAIResponse(
     throw new Error(`${provider} returned no completion choices`);
   }
 
-  return {
+  const normalized = {
     model: request.model,
     provider,
     text: choice.message.content ?? "",
@@ -381,6 +399,15 @@ function fromOpenAIResponse(
     attempts: 1,
     failedOver: false,
   };
+  return setBillable(normalized, [
+    component(
+      provider,
+      request.model,
+      normalized.usage,
+      1,
+      response.usage === undefined ? undefined : costFromUsage(response.usage),
+    ),
+  ]);
 }
 
 function extractOpenAIToolCalls(
@@ -425,6 +452,11 @@ function openAIUsage(usage: OpenAI.Completions.CompletionUsage): Usage {
     cacheCreationInputTokens:
       usage.prompt_tokens_details?.cache_write_tokens ?? 0,
   };
+}
+
+function costFromUsage(usage: unknown): number | undefined {
+  if (typeof usage !== "object" || usage === null || !("cost" in usage)) return undefined;
+  return typeof usage.cost === "number" ? usage.cost : undefined;
 }
 
 function completionBudget(model: string, requested: number): number {

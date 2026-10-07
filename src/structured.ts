@@ -16,6 +16,13 @@ import type {
   StructuredMode,
   Usage,
 } from "./types.js";
+import {
+  billable,
+  component,
+  setBillable,
+  setStructuredBilling,
+  type BillableComponent,
+} from "./cost/billing.js";
 
 const STRUCTURED_TOOL_NAME = "gateway_structured_output";
 const schemaCache = new WeakMap<ZodType, JsonSchema>();
@@ -64,8 +71,12 @@ async function completeStructured(
   let totalAttempts = 0;
   let issues: readonly ZodIssue[] = [];
   let invalidCandidate: unknown;
+  const billed: BillableComponent[] = [];
+  let repairsPerformed = 0;
 
-  for (let repairAttempts = 0; repairAttempts <= 1; repairAttempts += 1) {
+  try {
+    for (let repairAttempts = 0; repairAttempts <= 1; repairAttempts += 1) {
+    repairsPerformed = repairAttempts;
     const repairPrompt = repairAttempts === 0
       ? undefined
       : `The previous JSON ${JSON.stringify(invalidCandidate)} failed validation. Correct these issues and return a complete replacement: ${JSON.stringify(issues)}`;
@@ -77,11 +88,18 @@ async function completeStructured(
         ...(repairPrompt === undefined ? {} : { repairPrompt }),
       },
     });
+    const responseBilling = billable(response);
+    billed.push(...(responseBilling.length > 0
+      ? responseBilling
+      : [component(response.provider, response.model, response.usage, response.attempts)]));
     totalUsage = addUsage(totalUsage, response.usage);
     totalAttempts += response.attempts;
 
     if (response.stopReason === "refusal") {
-      return { ...response, usage: totalUsage, attempts: totalAttempts };
+      return setBillable(
+        { ...response, usage: totalUsage, attempts: totalAttempts },
+        billed,
+      );
     }
 
     let candidate: unknown;
@@ -97,7 +115,7 @@ async function completeStructured(
     }
     const validation = await responseSchema.safeParseAsync(candidate);
     if (validation.success) {
-      return {
+      return setBillable({
         ...response,
         usage: totalUsage,
         attempts: totalAttempts,
@@ -107,13 +125,21 @@ async function completeStructured(
           strippedConstraints: prepared.strippedConstraints,
           repairAttempts,
         },
-      };
+      }, billed);
     }
     invalidCandidate = candidate;
     issues = validation.error.issues;
-  }
+    }
 
-  throw new SchemaValidationError(provider.name, issues);
+    throw new SchemaValidationError(provider.name, issues);
+  } catch (error) {
+    if (typeof error === "object" && error !== null) {
+      const errorBilling = billable(error);
+      setBillable(error, [...billed, ...errorBilling]);
+      setStructuredBilling(error, { mode, repairAttempts: repairsPerformed });
+    }
+    throw error;
+  }
 }
 
 function selectMode(

@@ -25,6 +25,7 @@ import {
 import { observeResponseBytes } from "./stream-activity.js";
 import { timeoutFromSignal } from "../timeouts.js";
 import { STRUCTURED_TOOL_NAME } from "../structured.js";
+import { component, hasUsage, setBillable } from "../cost/billing.js";
 
 const SDK_TIMEOUT_DISABLED_MS = 2_147_483_647;
 
@@ -215,7 +216,14 @@ async function* streamAnthropic(
             : parseAnthropicArguments(tool.argumentsJson),
       };
     }
-    yield { type: "done", stopReason, usage, ttftMs, attempts: 1 };
+    const done = {
+      type: "done" as const,
+      stopReason,
+      usage,
+      ttftMs,
+      attempts: 1,
+    };
+    yield setBillable(done, [component("anthropic", request.model, usage)]);
   } catch (error) {
     const timeout = timeoutFromSignal(signal);
     const mapped = timeout ?? (error instanceof GatewayError
@@ -223,7 +231,13 @@ async function* streamAnthropic(
       : error instanceof Anthropic.APIError
         ? toGatewayError("anthropic", error.status ?? null, error.headers, error)
         : toGatewayError("anthropic", null, undefined, error));
-    yield { type: "error", error: mapped, usage: ZERO_USAGE };
+    const event = { type: "error" as const, error: mapped, usage };
+    if (hasUsage(usage)) {
+      const billed = [component("anthropic", request.model, usage)];
+      setBillable(mapped, billed);
+      setBillable(event, billed);
+    }
+    yield event;
   } finally {
     controller.abort();
   }
@@ -412,7 +426,7 @@ function fromAnthropicResponse(
       : [],
   );
 
-  return {
+  const normalized = {
     model: request.model,
     provider: "anthropic",
     text,
@@ -422,6 +436,9 @@ function fromAnthropicResponse(
     attempts: 1,
     failedOver: false,
   };
+  return setBillable(normalized, [
+    component("anthropic", request.model, normalized.usage),
+  ]);
 }
 
 function normalizeAnthropicStopReason(

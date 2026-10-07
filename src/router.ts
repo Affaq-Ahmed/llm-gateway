@@ -11,6 +11,13 @@ import type {
   ModelId,
   StreamEvent,
 } from "./types.js";
+import {
+  billable,
+  component,
+  setBillable,
+  setStreamRoute,
+  type BillableComponent,
+} from "./cost/billing.js";
 
 export const tiers = {
   fast: {
@@ -56,6 +63,7 @@ export class Router {
     tier = "fast",
   ): Promise<GatewayResponse<T>> {
     const errors: GatewayError[] = [];
+    const billed: BillableComponent[] = [];
 
     for (const [index, provider] of this.providers.entries()) {
       try {
@@ -64,19 +72,30 @@ export class Router {
             toProviderRequest(input, tier, provider.name, this.tierMap),
           ),
         );
-        return {
+        const result = {
           ...response,
           provider: provider.name,
           failedOver: index > 0,
         } as GatewayResponse<T>;
+        const responseBilling = billable(response);
+        return setBillable(result, [
+          ...billed,
+          ...(responseBilling.length > 0
+            ? responseBilling
+            : [component(response.provider, response.model, response.usage, response.attempts)]),
+        ]);
       } catch (error) {
         const gatewayError = asGatewayError(provider.name, error);
+        billed.push(...billable(gatewayError));
         errors.push(gatewayError);
-        if (!gatewayError.failoverable) throw gatewayError;
+        if (!gatewayError.failoverable) {
+          setBillable(gatewayError, billed);
+          throw gatewayError;
+        }
       }
     }
 
-    throw new AllProvidersFailedError(errors);
+    throw setBillable(new AllProvidersFailedError(errors), billed);
   }
 
   async *stream(
@@ -86,26 +105,42 @@ export class Router {
     const tier = options.tier ?? "fast";
     const errors: GatewayError[] = [];
     let committed = false;
+    const billed: BillableComponent[] = [];
 
     for (const [index, provider] of this.providers.entries()) {
       try {
-        const stream = () =>
-          provider.stream(
-            toProviderRequest(input, tier, provider.name, this.tierMap),
-          );
+        const providerRequest = toProviderRequest(input, tier, provider.name, this.tierMap);
+        const stream = () => provider.stream(providerRequest);
         for await (const event of this.breakerFor(provider.name).execStream(
           () => throwStreamErrors(stream()),
         )) {
           if (event.type === "text" || event.type === "tool_call") {
             committed = true;
           }
-          yield event;
+          if (event.type === "done") {
+            const attached = billable(event);
+            const current = attached.length > 0
+              ? attached
+              : [component(provider.name, providerRequest.model, event.usage, event.attempts)];
+            const terminal = setBillable({ ...event }, [...billed, ...current]);
+            yield setStreamRoute(terminal, {
+              provider: provider.name,
+              model: providerRequest.model,
+              failedOver: index > 0,
+            });
+          } else {
+            yield event;
+          }
         }
         return;
       } catch (error) {
         const gatewayError = asGatewayError(provider.name, error);
+        billed.push(...billable(gatewayError));
         errors.push(gatewayError);
-        if (!gatewayError.failoverable) throw gatewayError;
+        if (!gatewayError.failoverable) {
+          setBillable(gatewayError, billed);
+          throw gatewayError;
+        }
 
         const next = this.providers[index + 1];
         if (next === undefined) break;
@@ -115,11 +150,12 @@ export class Router {
           yield { type: "restart", provider: next.name };
           continue;
         }
+        setBillable(gatewayError, billed);
         throw gatewayError;
       }
     }
 
-    throw new AllProvidersFailedError(errors);
+    throw setBillable(new AllProvidersFailedError(errors), billed);
   }
 
   private breakerFor(provider: string): Breaker {
@@ -135,7 +171,12 @@ async function* throwStreamErrors(
   stream: AsyncIterable<StreamEvent>,
 ): AsyncIterable<StreamEvent> {
   for await (const event of stream) {
-    if (event.type === "error") throw event.error;
+    if (event.type === "error") {
+      if (typeof event.error === "object" && event.error !== null) {
+        setBillable(event.error, billable(event));
+      }
+      throw event.error;
+    }
     yield event;
   }
 }

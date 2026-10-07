@@ -54,6 +54,28 @@ original Zod schema. `schemaPolicy: "strict"` rejects Anthropic integer bounds
 before making a request, while `"relax"` removes those unsupported wire
 keywords, reports them in `strippedConstraints`, and keeps Zod enforcement.
 
+## Cost telemetry
+
+Pass any `CostSink` to record one telemetry item per logical gateway call. The
+built-in JSONL sink is the file-backed default implementation; a later
+telemetry backend only needs to implement the same interface:
+
+```ts
+import { createGateway, JsonlCostSink } from "@affaqahmed/llm-gateway";
+
+const gateway = createGateway({
+  providers,
+  costSink: new JsonlCostSink("./logs/llm-costs.jsonl"),
+});
+```
+
+Records omit prompts by default (`logContent: false`). They include summed
+usage from billed repairs and failovers, latency, TTFT, attempts, structured
+mode, and the serving provider. OpenRouter's reported cost is authoritative;
+other providers use date-keyed per-model prices. Reasoning tokens remain an
+output-token breakdown and are never charged a second time. Use `summarize()`
+to aggregate records by trace ID and calculate min, p50, p95, and max cost.
+
 ## Providers
 
 The non-streaming adapters normalize provider responses before returning them:

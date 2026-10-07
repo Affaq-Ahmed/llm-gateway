@@ -130,6 +130,6 @@ export type StreamEvent =
   | {
       readonly type: "error";
       readonly error: unknown;
-      readonly usage: ZeroUsage;
+      readonly usage: Usage;
     }
   | { readonly type: "restart"; readonly provider: string };

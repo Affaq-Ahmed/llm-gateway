@@ -9,6 +9,7 @@ import {
 } from "./retry.js";
 import { deadlineExceeded, StallTimer, startTimeout } from "./timeouts.js";
 import { ZERO_USAGE, type GatewayRequest, type StreamEvent } from "./types.js";
+import { billable, component, setBillable, type BillableComponent } from "./cost/billing.js";
 
 export type ResilienceOptions = {
   readonly retry?: Partial<RetryPolicy>;
@@ -32,8 +33,9 @@ export function withResilience(
 
     async complete(request, options) {
       const deadline = startTimeout(provider.name, "deadline", policy.deadlineMs);
+      const billedFailures: BillableComponent[] = [];
       try {
-        return await withRetry(
+        const response = await withRetry(
           async (attempt) => {
             const attemptTimer = startTimeout(
               provider.name,
@@ -46,17 +48,31 @@ export function withResilience(
               attemptTimer.signal,
             );
             try {
-              const response = await provider.complete(
-                { ...request, signal },
-                {
-                  ...options,
-                  onBytes: () => {
-                    attemptTimer.clear();
-                    options?.onBytes?.();
+              try {
+                const response = await provider.complete(
+                  { ...request, signal },
+                  {
+                    ...options,
+                    onBytes: () => {
+                      attemptTimer.clear();
+                      options?.onBytes?.();
+                    },
                   },
-                },
-              );
-              return { ...response, attempts: attempt };
+                );
+                const result = { ...response, attempts: attempt };
+                const attached = billable(response);
+                const successful = attached.length > 0
+                  ? attached.map((item, index) => index === attached.length - 1
+                    ? { ...item, attempts: attempt }
+                    : item)
+                  : [component(response.provider, response.model, response.usage, attempt)];
+                return setBillable(result, [...billedFailures, ...successful]);
+              } catch (error) {
+                if (typeof error === "object" && error !== null) {
+                  billedFailures.push(...billable(error));
+                }
+                throw error;
+              }
             } finally {
               attemptTimer.clear();
             }
@@ -64,6 +80,12 @@ export function withResilience(
           policy,
           { ...hooks, provider: provider.name },
         );
+        return response;
+      } catch (error) {
+        if (typeof error === "object" && error !== null && billedFailures.length > 0) {
+          setBillable(error, billedFailures);
+        }
+        throw error;
       } finally {
         deadline.clear();
       }
@@ -101,6 +123,7 @@ async function* resilientStream(
     options.policy.deadlineMs,
   );
   let lastError: GatewayError | undefined;
+  const billed: BillableComponent[] = [];
 
   try {
     for (
@@ -109,7 +132,7 @@ async function* resilientStream(
       attempt += 1
     ) {
       if (deadlineExceeded(startedAt, options.policy.deadlineMs, 0, now)) {
-        yield errorEvent(new TimeoutError(provider.name, "deadline", lastError));
+        yield errorEvent(new TimeoutError(provider.name, "deadline", lastError), billed);
         return;
       }
 
@@ -150,10 +173,25 @@ async function* resilientStream(
         )) {
           if (event.type === "error") {
             failure = asGatewayError(provider.name, event.error);
+            const attached = billable(event);
+            billed.push(...(attached.length > 0
+              ? attached
+              : hasNonZeroUsage(event.usage)
+                ? [component(provider.name, request.model, event.usage)]
+                : []));
             break;
           }
           if (event.type === "done") {
-            yield { ...event, attempts: attempt };
+            const attached = billable(event);
+            const successful = attached.length > 0
+              ? attached.map((item, index) => index === attached.length - 1
+                ? { ...item, attempts: attempt }
+                : item)
+              : [component(provider.name, request.model, event.usage, attempt)];
+            yield setBillable(
+              { ...event, attempts: attempt },
+              [...billed, ...successful],
+            );
             return;
           }
           yield event;
@@ -170,7 +208,7 @@ async function* resilientStream(
       lastError = failure;
 
       if (sawContent || !failure.retryable || attempt === options.policy.maxAttempts) {
-        yield errorEvent(failure);
+        yield errorEvent(failure, billed);
         return;
       }
 
@@ -182,11 +220,11 @@ async function* resilientStream(
         elapsedMs: now() - startedAt,
       });
       if (delayMs === null) {
-        yield errorEvent(failure);
+        yield errorEvent(failure, billed);
         return;
       }
       if (deadlineExceeded(startedAt, options.policy.deadlineMs, delayMs, now)) {
-        yield errorEvent(new TimeoutError(provider.name, "deadline", failure));
+        yield errorEvent(new TimeoutError(provider.name, "deadline", failure), billed);
         return;
       }
       await sleep(delayMs);
@@ -208,8 +246,34 @@ function asGatewayError(provider: string, error: unknown): GatewayError {
     : toGatewayError(provider, null, undefined, error);
 }
 
-function errorEvent(error: GatewayError): StreamEvent {
-  return { type: "error", error, usage: ZERO_USAGE };
+function errorEvent(
+  error: GatewayError,
+  billed: readonly BillableComponent[],
+): StreamEvent {
+  if (billed.length > 0) setBillable(error, billed);
+  return setBillable(
+    { type: "error", error, usage: billed.length === 0 ? ZERO_USAGE : sumBilledUsage(billed) },
+    billed,
+  );
+}
+
+function hasNonZeroUsage(usage: import("./types.js").Usage): boolean {
+  return Object.values(usage).some((value) => value !== 0);
+}
+
+function sumBilledUsage(items: readonly BillableComponent[]): import("./types.js").Usage {
+  return items.reduce<import("./types.js").Usage>(
+    (total, item) => ({
+      inputTokens: total.inputTokens + item.usage.inputTokens,
+      outputTokens: total.outputTokens + item.usage.outputTokens,
+      totalTokens: total.totalTokens + item.usage.totalTokens,
+      reasoningTokens: total.reasoningTokens + item.usage.reasoningTokens,
+      cachedInputTokens: total.cachedInputTokens + item.usage.cachedInputTokens,
+      cacheCreationInputTokens:
+        total.cacheCreationInputTokens + item.usage.cacheCreationInputTokens,
+    }),
+    ZERO_USAGE,
+  );
 }
 
 function defaultSleep(ms: number): Promise<void> {
