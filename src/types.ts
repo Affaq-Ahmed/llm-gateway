@@ -101,7 +101,8 @@ export type StreamEvent =
       readonly type: "done";
       readonly stopReason: StopReason;
       readonly usage: Usage;
-      readonly ttftMs: number;
+      /** Null when the stream completes without producing text (for example, tool-only output). */
+      readonly ttftMs: number | null;
     }
   | {
       readonly type: "error";

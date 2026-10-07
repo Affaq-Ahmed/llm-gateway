@@ -13,6 +13,12 @@ type RecordedFixture = {
   };
 };
 
+export type RecordedStreamFixture = {
+  readonly protocol: "openai" | "anthropic";
+  readonly request: RecordedRequest;
+  readonly events: readonly Readonly<Record<string, unknown>>[];
+};
+
 export function createFixtureFetch(
   fixtures: readonly RecordedFixture[],
 ): typeof fetch {
@@ -35,6 +41,43 @@ export function createFixtureFetch(
         "content-type": "application/json",
         ...recorded.headers,
       },
+    });
+  };
+}
+
+export function createStreamingFixtureFetch(
+  fixture: RecordedStreamFixture,
+  observeSignal?: (signal: AbortSignal | null) => void,
+): typeof fetch {
+  return async (input, init) => {
+    const request = await normalizeRequest(input, init);
+    if (requestKey(request) !== requestKey(fixture.request)) {
+      throw new Error(`No recorded fixture for request ${requestKey(request)}`);
+    }
+    observeSignal?.(init?.signal ?? null);
+    const chunks = fixture.events.map((event) => {
+      const name =
+        fixture.protocol === "anthropic"
+          ? `event: ${String(event.type)}\n`
+          : "";
+      return `${name}data: ${JSON.stringify(event)}\n\n`;
+    });
+    if (fixture.protocol === "openai") chunks.push("data: [DONE]\n\n");
+    let index = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        const chunk = chunks[index];
+        if (chunk === undefined) {
+          controller.close();
+          return;
+        }
+        index += 1;
+        controller.enqueue(new TextEncoder().encode(chunk));
+      },
+    });
+    return new Response(body, {
+      status: 200,
+      headers: { "content-type": "text/event-stream" },
     });
   };
 }

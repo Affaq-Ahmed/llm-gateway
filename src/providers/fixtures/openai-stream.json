@@ -1,0 +1,20 @@
+{
+  "protocol": "openai",
+  "request": {
+    "url": "https://api.openai.com/v1/chat/completions",
+    "method": "POST",
+    "body": {
+      "model": "gpt-4o-mini",
+      "messages": [{ "role": "user", "content": "Use both tools." }],
+      "max_completion_tokens": 32,
+      "stream": true,
+      "stream_options": { "include_usage": true }
+    }
+  },
+  "events": [
+    { "id": "chat-1", "object": "chat.completion.chunk", "created": 1, "model": "gpt-4o-mini", "choices": [{ "index": 0, "delta": { "content": "Working" }, "finish_reason": null }], "usage": null },
+    { "id": "chat-1", "object": "chat.completion.chunk", "created": 1, "model": "gpt-4o-mini", "choices": [{ "index": 0, "delta": { "tool_calls": [{ "index": 0, "id": "call_a", "type": "function", "function": { "name": "first", "arguments": "{\"x\":" } }, { "index": 1, "id": "call_b", "type": "function", "function": { "name": "second", "arguments": "{\"y\":" } }] }, "finish_reason": null }], "usage": null },
+    { "id": "chat-1", "object": "chat.completion.chunk", "created": 1, "model": "gpt-4o-mini", "choices": [{ "index": 0, "delta": { "tool_calls": [{ "index": 1, "function": { "arguments": "2}" } }, { "index": 0, "function": { "arguments": "1}" } }] }, "finish_reason": "tool_calls" }], "usage": null },
+    { "id": "chat-1", "object": "chat.completion.chunk", "created": 1, "model": "gpt-4o-mini", "choices": [], "usage": { "prompt_tokens": 11, "completion_tokens": 7, "total_tokens": 18, "completion_tokens_details": { "reasoning_tokens": 2 }, "prompt_tokens_details": { "cached_tokens": 3 } } }
+  ]
+}

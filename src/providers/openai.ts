@@ -11,10 +11,11 @@ import {
   type Usage,
 } from "../types.js";
 import {
-  streamNotImplemented,
   type Provider,
   type ProviderFeature,
+  type StreamActivityHooks,
 } from "./provider.js";
+import { observeResponseBytes } from "./stream-activity.js";
 
 const REASONING_MIN_COMPLETION_TOKENS = 4_000;
 
@@ -35,16 +36,7 @@ export function createOpenAIProvider(
   options: OpenAIProviderOptions = {},
 ): Provider {
   const name = options.name ?? "openai";
-  const client = new OpenAI({
-    maxRetries: 0,
-    timeout: SDK_TIMEOUT_DISABLED_MS,
-    ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
-    ...(options.baseURL === undefined ? {} : { baseURL: options.baseURL }),
-    ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
-    ...(options.defaultHeaders === undefined
-      ? {}
-      : { defaultHeaders: options.defaultHeaders }),
-  });
+  const client = createOpenAIClient(options);
 
   return {
     name,
@@ -70,8 +62,23 @@ export function createOpenAIProvider(
       }
     },
 
-    stream() {
-      return streamNotImplemented(name);
+    stream(request, activity) {
+      const streamClient = activity?.onBytes === undefined
+        ? client
+        : createOpenAIClient(
+            options,
+            observeResponseBytes(
+              options.fetch ?? globalThis.fetch,
+              activity.onBytes,
+            ),
+          );
+      return streamOpenAI(
+        streamClient,
+        request,
+        name,
+        options.constrainedJson ?? true,
+        activity,
+      );
     },
 
     supports(feature: ProviderFeature) {
@@ -79,6 +86,107 @@ export function createOpenAIProvider(
       return options.constrainedJson ?? true;
     },
   };
+}
+
+function createOpenAIClient(
+  options: OpenAIProviderOptions,
+  fetchOverride?: typeof fetch,
+): OpenAI {
+  return new OpenAI({
+    maxRetries: 0,
+    timeout: SDK_TIMEOUT_DISABLED_MS,
+    ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+    ...(options.baseURL === undefined ? {} : { baseURL: options.baseURL }),
+    ...(fetchOverride === undefined
+      ? options.fetch === undefined
+        ? {}
+        : { fetch: options.fetch }
+      : { fetch: fetchOverride }),
+    ...(options.defaultHeaders === undefined
+      ? {}
+      : { defaultHeaders: options.defaultHeaders }),
+  });
+}
+
+async function* streamOpenAI(
+  client: OpenAI,
+  request: GatewayRequest,
+  provider: string,
+  constrainedJson: boolean,
+  activity?: StreamActivityHooks,
+): AsyncIterable<import("../types.js").StreamEvent> {
+  const startedAt = performance.now();
+  const controller = new AbortController();
+  const signal = request.signal === undefined
+    ? controller.signal
+    : AbortSignal.any([request.signal, controller.signal]);
+  let ttftMs: number | null = null;
+  let usage: Usage = ZERO_USAGE;
+  let stopReason: StopReason = "unknown";
+  const tools = new Map<
+    number,
+    { id: string; name: string; argumentsJson: string }
+  >();
+
+  try {
+    const base = toOpenAIRequest(request, provider, constrainedJson);
+    const stream = await client.chat.completions.create(
+      { ...base, stream: true, stream_options: { include_usage: true } },
+      { signal },
+    );
+
+    for await (const chunk of stream) {
+      if (chunk.usage != null) usage = openAIUsage(chunk.usage);
+
+      const choice = chunk.choices[0];
+      if (choice === undefined) continue;
+
+      const text = choice.delta.content;
+      if (typeof text === "string" && text !== "") {
+        activity?.onContent?.();
+        ttftMs ??= performance.now() - startedAt;
+        yield { type: "text", delta: text };
+      }
+
+      for (const fragment of choice.delta.tool_calls ?? []) {
+        let tool = tools.get(fragment.index);
+        if (tool === undefined) {
+          tool = { id: "", name: "", argumentsJson: "" };
+          tools.set(fragment.index, tool);
+        }
+        if (fragment.id !== undefined) tool.id = fragment.id;
+        if (fragment.function?.name !== undefined) tool.name += fragment.function.name;
+        const argumentsDelta = fragment.function?.arguments;
+        if (argumentsDelta !== undefined && argumentsDelta !== "") {
+          activity?.onContent?.();
+          tool.argumentsJson += argumentsDelta;
+        }
+      }
+
+      if (choice.finish_reason !== null) {
+        stopReason = normalizeOpenAIStopReason(choice.finish_reason);
+      }
+    }
+
+    for (const tool of tools.values()) {
+      yield {
+        type: "tool_call",
+        id: tool.id,
+        name: tool.name,
+        args: parseArguments(tool.argumentsJson),
+      };
+    }
+    yield { type: "done", stopReason, usage, ttftMs };
+  } catch (error) {
+    const mapped = error instanceof GatewayError
+      ? error
+      : error instanceof OpenAI.APIError
+        ? toGatewayError(provider, error.status ?? null, error.headers, error)
+        : toGatewayError(provider, null, undefined, error);
+    yield { type: "error", error: mapped, usage: ZERO_USAGE };
+  } finally {
+    controller.abort();
+  }
 }
 
 function toOpenAIRequest(

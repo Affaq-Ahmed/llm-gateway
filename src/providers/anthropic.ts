@@ -9,12 +9,15 @@ import type {
   StopReason,
   ToolCall,
   Usage,
+  StreamEvent,
 } from "../types.js";
+import { ZERO_USAGE } from "../types.js";
 import {
-  streamNotImplemented,
   type Provider,
   type ProviderFeature,
+  type StreamActivityHooks,
 } from "./provider.js";
+import { observeResponseBytes } from "./stream-activity.js";
 
 const SDK_TIMEOUT_DISABLED_MS = 2_147_483_647;
 
@@ -27,12 +30,7 @@ export function createAnthropicProvider(
   options: AnthropicProviderOptions = {},
 ): Provider {
   const name = "anthropic";
-  const client = new Anthropic({
-    maxRetries: 0,
-    timeout: SDK_TIMEOUT_DISABLED_MS,
-    ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
-    ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
-  });
+  const client = createAnthropicClient(options);
 
   return {
     name,
@@ -58,13 +56,168 @@ export function createAnthropicProvider(
       }
     },
 
-    stream() {
-      return streamNotImplemented(name);
+    stream(request, activity) {
+      const streamClient = activity?.onBytes === undefined
+        ? client
+        : createAnthropicClient(
+            options,
+            observeResponseBytes(
+              options.fetch ?? globalThis.fetch,
+              activity.onBytes,
+            ),
+          );
+      return streamAnthropic(streamClient, request, activity);
     },
 
     supports(feature: ProviderFeature) {
       return feature === "cacheControl" || feature === "constrainedJson";
     },
+  };
+}
+
+function createAnthropicClient(
+  options: AnthropicProviderOptions,
+  fetchOverride?: typeof fetch,
+): Anthropic {
+  return new Anthropic({
+    maxRetries: 0,
+    timeout: SDK_TIMEOUT_DISABLED_MS,
+    ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+    ...(fetchOverride === undefined
+      ? options.fetch === undefined
+        ? {}
+        : { fetch: options.fetch }
+      : { fetch: fetchOverride }),
+  });
+}
+
+async function* streamAnthropic(
+  client: Anthropic,
+  request: GatewayRequest,
+  activity?: StreamActivityHooks,
+): AsyncIterable<StreamEvent> {
+  const startedAt = performance.now();
+  const controller = new AbortController();
+  const signal = request.signal === undefined
+    ? controller.signal
+    : AbortSignal.any([request.signal, controller.signal]);
+  let ttftMs: number | null = null;
+  let usage: Usage = ZERO_USAGE;
+  let stopReason: StopReason = "unknown";
+  const tools = new Map<
+    number,
+    {
+      id: string;
+      name: string;
+      argumentsJson: string;
+      initialInput: unknown;
+    }
+  >();
+
+  try {
+    const stream = await client.messages.create(
+      { ...toAnthropicRequest(request), stream: true },
+      { signal },
+    );
+
+    for await (const event of stream) {
+      if (event.type === "message_start") {
+        usage = anthropicUsage(event.message.usage);
+      } else if (
+        event.type === "content_block_start" &&
+        event.content_block.type === "tool_use"
+      ) {
+        tools.set(event.index, {
+          id: event.content_block.id,
+          name: event.content_block.name,
+          argumentsJson: "",
+          initialInput: event.content_block.input,
+        });
+      } else if (event.type === "content_block_delta") {
+        if (event.delta.type === "text_delta" && event.delta.text !== "") {
+          activity?.onContent?.();
+          ttftMs ??= performance.now() - startedAt;
+          yield { type: "text", delta: event.delta.text };
+        } else if (
+          event.delta.type === "input_json_delta" &&
+          event.delta.partial_json !== ""
+        ) {
+          activity?.onContent?.();
+          const tool = tools.get(event.index);
+          if (tool !== undefined) tool.argumentsJson += event.delta.partial_json;
+        }
+      } else if (event.type === "content_block_stop") {
+        const tool = tools.get(event.index);
+        if (tool !== undefined) {
+          tools.delete(event.index);
+          yield {
+            type: "tool_call",
+            id: tool.id,
+            name: tool.name,
+            args:
+              tool.argumentsJson === ""
+                ? tool.initialInput
+                : parseAnthropicArguments(tool.argumentsJson),
+          };
+        }
+      } else if (event.type === "message_delta") {
+        stopReason = normalizeAnthropicStopReason(event.delta.stop_reason);
+        usage = mergeAnthropicStreamUsage(usage, event.usage);
+      }
+    }
+
+    for (const tool of tools.values()) {
+      yield {
+        type: "tool_call",
+        id: tool.id,
+        name: tool.name,
+        args:
+          tool.argumentsJson === ""
+            ? tool.initialInput
+            : parseAnthropicArguments(tool.argumentsJson),
+      };
+    }
+    yield { type: "done", stopReason, usage, ttftMs };
+  } catch (error) {
+    const mapped = error instanceof GatewayError
+      ? error
+      : error instanceof Anthropic.APIError
+        ? toGatewayError("anthropic", error.status ?? null, error.headers, error)
+        : toGatewayError("anthropic", null, undefined, error);
+    yield { type: "error", error: mapped, usage: ZERO_USAGE };
+  } finally {
+    controller.abort();
+  }
+}
+
+function parseAnthropicArguments(argumentsJson: string): unknown {
+  try {
+    return JSON.parse(argumentsJson) as unknown;
+  } catch {
+    return argumentsJson;
+  }
+}
+
+function mergeAnthropicStreamUsage(
+  previous: Usage,
+  terminal: Anthropic.MessageDeltaUsage,
+): Usage {
+  const inputTokens = terminal.input_tokens ?? previous.inputTokens;
+  const outputTokens = terminal.output_tokens;
+  const cachedInputTokens =
+    terminal.cache_read_input_tokens ?? previous.cachedInputTokens;
+  const cacheCreationInputTokens =
+    terminal.cache_creation_input_tokens ?? previous.cacheCreationInputTokens;
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens:
+      inputTokens + outputTokens + cachedInputTokens + cacheCreationInputTokens,
+    reasoningTokens:
+      terminal.output_tokens_details?.thinking_tokens ??
+      previous.reasoningTokens,
+    cachedInputTokens,
+    cacheCreationInputTokens,
   };
 }
 
