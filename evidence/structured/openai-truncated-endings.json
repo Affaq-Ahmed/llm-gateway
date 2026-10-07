@@ -1,0 +1,11 @@
+{
+  "source": [
+    "week2-scratch/fixtures/structured/openai-L3-0-response.json",
+    "week2-scratch/fixtures/structured/openai-L3-1-response.json"
+  ],
+  "constraint": { "maxLength": 120 },
+  "summaries": [
+    "Router repeatedly drops connection approximately every 20 minutes and indoor camera intermittently misses people; after尝",
+    "Customer reports OrbitMesh Mini router disconnects every ~20 minutes and NightOwl indoor camera intermittently misses 사람"
+  ]
+}

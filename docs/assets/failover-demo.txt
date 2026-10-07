@@ -1,0 +1,17 @@
+PRE-CONTENT — transparent failover
+  (upstream: primary failed with 500)
+text   complete response from fallback
+done   end_turn
+
+POST-CONTENT — typed error by default
+text   partial response from primary
+  (upstream: primary failed with 500)
+error  OverloadedError provider=primary status=500
+
+POST-CONTENT — explicit restart mode
+text   partial response from primary
+  (upstream: primary failed with 500)
+restart -> fallback
+text   complete response from fallback
+done   end_turn
+

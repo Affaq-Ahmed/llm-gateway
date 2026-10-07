@@ -22,8 +22,11 @@
   },
   "scripts": {
     "build": "tsup",
-    "test": "vitest run",
+    "test": "vitest run && node --test scripts/record.test.mjs",
     "typecheck": "tsc --noEmit",
+    "capture:live": "npm run build --silent && node --env-file=../week2-scratch/.env scripts/capture-live.mjs",
+    "demo:failover": "npm run build --silent && node scripts/demo-failover.mjs",
+    "demo:gif": "npm run demo:failover --silent -- --transcript docs/assets/failover-demo.txt && node scripts/render-demo-gif.mjs",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {

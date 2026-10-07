@@ -1,0 +1,49 @@
+{
+  "capturedAt": "2026-10-07T18:03:43.357Z",
+  "priceSnapshot": "2026-10-07",
+  "prompt": "In one sentence, explain why a circuit breaker should ignore malformed-request errors.",
+  "rows": [
+    {
+      "provider": "anthropic",
+      "model": "claude-haiku-4-5",
+      "usage": {
+        "inputTokens": 25,
+        "outputTokens": 47,
+        "totalTokens": 72,
+        "reasoningTokens": 0,
+        "cachedInputTokens": 0,
+        "cacheCreationInputTokens": 0
+      },
+      "cost": 0.00026,
+      "costSource": "computed"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5-mini",
+      "usage": {
+        "inputTokens": 21,
+        "outputTokens": 172,
+        "totalTokens": 193,
+        "reasoningTokens": 128,
+        "cachedInputTokens": 0,
+        "cacheCreationInputTokens": 0
+      },
+      "cost": 0.00034925,
+      "costSource": "computed"
+    },
+    {
+      "provider": "openrouter",
+      "model": "openai/gpt-5-mini",
+      "usage": {
+        "inputTokens": 21,
+        "outputTokens": 185,
+        "totalTokens": 206,
+        "reasoningTokens": 128,
+        "cachedInputTokens": 0,
+        "cacheCreationInputTokens": 0
+      },
+      "cost": 0.00037525,
+      "costSource": "provider"
+    }
+  ]
+}

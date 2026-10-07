@@ -1,0 +1,161 @@
+{
+  "capturedAt": "2026-10-07T18:03:58.065Z",
+  "provider": "openrouter",
+  "model": "openai/gpt-5-mini",
+  "strictForwarded": true,
+  "request": {
+    "url": "https://openrouter.ai/api/v1/chat/completions",
+    "method": "POST",
+    "body": {
+      "model": "openai/gpt-5-mini",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Return count 7 and label strict-forwarding. Use the required tool."
+        }
+      ],
+      "max_completion_tokens": 4000,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "gateway_structured_output",
+            "description": "Return the requested structured response.",
+            "parameters": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "count",
+                "label"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true
+          }
+        }
+      ],
+      "tool_choice": {
+        "type": "function",
+        "function": {
+          "name": "gateway_structured_output"
+        }
+      },
+      "parallel_tool_calls": false
+    }
+  },
+  "response": {
+    "status": 200,
+    "requestId": null,
+    "body": {
+      "id": "gen-1791396233-1dqYdDvDtWDm0b21abkr",
+      "object": "chat.completion",
+      "created": 1791396233,
+      "model": "openai/gpt-5-mini",
+      "provider": "OpenAI",
+      "system_fingerprint": null,
+      "service_tier": "default",
+      "choices": [
+        {
+          "index": 0,
+          "logprobs": null,
+          "finish_reason": "tool_calls",
+          "native_finish_reason": "completed",
+          "message": {
+            "role": "assistant",
+            "content": null,
+            "refusal": null,
+            "reasoning": null,
+            "tool_calls": [
+              {
+                "type": "function",
+                "index": 0,
+                "id": "call_RNlDQAYNSe8XTfO2aXrMrLgr",
+                "function": {
+                  "name": "gateway_structured_output",
+                  "arguments": "{\"count\":7,\"label\":\"strict-forwarding\"}"
+                }
+              }
+            ],
+            "reasoning_details": [
+              {
+                "type": "reasoning.encrypted",
+                "data": "gAAAAABqxomOO-pf3yFGr6id3LcxiKENI7iRRS82uqD16g5tPIe-BgXkLvi8FkivL4WHLmxdl51dVnChvvQb2R9-YniuZhyBLslYO39KzonQfZ8F5Gg6TRSMC720lJLX0VJRsLQDG5xZ7_3tAvJqzaaAE0MjINKCM9IcVBbfr9xa8JDFrrbAuI22GXc1ijSwdzyTspFnq8W34zntGilLVVYOcxb5E6vswfCFR9Wrm2OfjlVZLEjWmut8l2MJdbemAKT0jvIAPtgXxIhBUQSCFrXB2ATx6SE2vX0po600cRgX6Krw3B6HJlLz-9eoKwjhxteQfmcp0_33GmLWmaAUStUhOMl5wJU3JRAfh9Qo45EYvwDFXfxDfKIoF-jVRGWbPs-L5nITVlyRCjUqXVJCwzltrhR6CHY0dssbDMv-YP_CNmzkfGQESLnwI9nnotIMyt6-X1z32dcnJcOLLbgXDtpQh3U_MpT-EEGdV0RogQuyYsude06KNTZY8UQiZrjGUJQmvaetWfNPgSC3USPiCTJ-tYPRNXOdHlwLHc589Qf15wkZ7-Ny9ZtFgehmP78LVYj9gYh5pV2CQthCyQT0AnI9lSGJ1aDPlagns7yjGXpFNlHkUNgYBjnrK0xMYzlAdalPSG5FIzg2fDI1-WqtADK0XxT7HheHGIJvV2HodTedXpSkDwpFFk5aWMtunyiLaSf7BExXQA_4Txov2L1yn0CktFvoRgwXdIUIa6IJI2gJbk2K93vXyRlxTnmmj08dNlA3N5gu8yMTSBTi4XAM1h04ZqKBoCUMGMMftqlHRigFdGW5YPCTnjrDzkq6gE7klX-k1Q030BGNCqvRefPMt6cq7OBDeyCLF7LHvWAYOHZHJo4KlHnio49bwe_JTl1uQOVC1l76MWEq39GYtqhHJzb_M94Znp75TO4OHVJD5mzogt4uC8HdWxLAZ_twnHSc6aJsAUitJ5QTywi4dgaYERw4fN9y4I84RUe8aywEiax0nNJ2xXalyjgKr1MQ_qujrgin5skfSS7KuCiACtbCON1vt1VZ6SDcs0U3j91yplRc5NB6nqnyU3PeNlbFxCl8vbWK0uYc-Sp7txoWjJhIFmBIiyLIv_EFWF8hzZkvw3LLdC7HJ4cCVsqXwHQkXL2mH1t89oa6AYa4WZorakQG1nrkujJNwICrsMhQjcdGIFZtzoGP8PqTvUoaakXWAecpoUxr40DHXfSP1sW1MbfeEUC_LExQmc6IVm-0pq1N_eZIgyRo9HhE8yc_Rz0OOn42MKao0RRdUCR-26adHZVtvAGqTcsXVlQavBWW9uIKa51i8QyBjf1mymX08fKWbwYv6GJFAukLg4_eI01UjgbPEJgv8gncAH5yj-JzKK0axe5zzW_B5csnpvQqu_l7NY1hcQHpNLv1MXsPaT6HFdv3TjqchwEdcXuDpo4Zy1t3RSSwbRicXCSfVoOHx22yOOzfSS9qoZm9zU6hsiKCguzR-eaAbmyDV2t-zAMCImpr7OPRY4QuAh0KPOHEhlX5r4kjSKujOnP31r3c_hZf3fp36AQ--6qSohLOIhYUhlhvRp_XfoY0q4RcKUWqZfGpKeVbXYA3l24cdOMzRBMJrJehDZPKg8xQuILrZeVNvWPUfAM0nPFz0Kh0cxaUhuRTnN0KL7BQ_Br8Z7jztTg_UNjG7AlNDcgJQqclfRlbDfq9sFTIBUz63PUJVYKIfytfJKUUyQbJEvZdERJw0cd52fJTR40i8H3Ra4zhBlwTbn034PEQZUg4h2JvH0P3pgHK41meVJIWlv1t_hdB2vmt7C9ooxSJ8U1lyIcDs1Gex3hJfZ9csjZOONU0ZrmSzej_4xiNVbYO0j96aPUjSEU2bAOWb6EUpwqskJ0qXEygM79P9pMA9dphD9VlW5wKgZpotkfe4M3XOMXjswOhqcwwIEKQY-kVYuMzcz3Oc85cXQMhOGNMIACUuLSDm60wED0RmDyfZ91K_aDo4ZsUd_-TCTQc1eu9PeK9tgigBCWc4HOl5pY_O8jd7OL3P8q0a__OlqfuvK0LpTZBuUkRlHN6mGM1uYE1n_fvo11hb75P9JMVKRA2CO9jRExYAzC4dWzZ5LhUST9wgK-6e8K5Z3vsgfgI5SNkCYtDRl6VoekXY5Ea-_tZ8rcl1s01jQCrrhZpo2sGS-U1HxteBpVv3TDxtpDFqKR0X84GudSjsgLpO1YlBOfIvf-GMg3J6YhAsdkAtT6t4Ly94zWi6IXum3WhOczJOKM3eEhU0VF9In-86jGWRW9O8_s36F9o8fgLZXpGt-WWcQ1rxUAHYgHQxe7enk6dW2Idp1JN-aTLdGZTmd_dY1PPOk4WGYn-odZYYokMNogWjbThYU6xGzmCnfgw5jDLLPcMD9cppEDndyt4CjzY4YsHYRc3ltWhBkW5NOtsYl-Uwf02IhivJsSXsE_aJ5vIocgkEi29gtjk_42JzjQ43XuRI619jVBn7da2fzSnZCcBERTlk3z38VttYT4XPVZYL1qrvhfw-dSdE_-d1R7lrFOoV7IX9CtdZsnRmm4yuwf-x2tCy0wohiaRFOCkibOdfIhCbF4gk1jj1_I_WVkWfex3LIPQuq4byUaB-iNRGz2goSTGIfbnpWorrE_bKY330NIIVo2230K8HZUY4XMWL0vFh-mqiB8twVv8jcGcfPHCUjF14stHAnlKKEaxEP4voR45S-nXQY1ceO0INsbsdk_dN-rHmqt5nx9tM5mWA_op5IOYpQAse9zULe_RdKyRiezJikYHpCQ42B2RefTkjbMTGOcOZ_h-Qo_bpmCq1lBwDIUM6TYFf8q7djI9AqEK6JBrfkV-usSAYJP11R8Mwuz6xNSsT-7-HlYgoguEDS1A7P73m3S1C2BJQPS5rjo7qnFJqtEUciilGC7DjSMfJk03X707xUSUFHo9C8-iaI7jWpMXqvW3z6qyTSL27Hhs4x6UKI3xhRofs2MdbPy8yKsoXOwhIMJtTqFkqoT9MMFW7sqzN_mc2Du26qzRaEsmcq17bIP0dsNDiFPk9NbDc2neXtjrviLcQ9qXrtpz3fMqPW5dGUvhoyPCltU_1o4L49lNv6D0UvsvfPsWsATPDUgVx0eicnuWlpUL-9oU84J-eAw-3O_rwC2L_XfeNGgQAAuokzaPxw5UqySe_EvJkg1o1jYO_OaLCMQgmEuWVQP5Q6jy4ZqL1qU3u4Ok5HggXVv5ctvavURb07d5UBfcOGOOsyWLpV9iiYWOpCuiQYrCNQljwjfeKduEBKvPpb6AxViydQkh0uuUsrRL7C58jECZlmCGz1hHE3_a--cOqcMzzZSIQzrOyZ-weRPWGJNR4dhF1ocK66ZlBAdWgJA7qPpBFVRuhaQTIXw=.eyJlbmRwb2ludF9zbHVnIjoib3BlbmFpL2dwdC01LW1pbmktMjAyNS0wOC0wN3xvcGVuYWkifQ",
+                "format": "openai-responses-v1",
+                "id": "rs_0f5f0ac11ca09058016ac6898a723487d1b43ea3767c1187ab",
+                "index": 0
+              }
+            ]
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 163,
+        "completion_tokens": 326,
+        "total_tokens": 489,
+        "cost": 0.00069275,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00069275,
+          "upstream_inference_prompt_cost": 0.00004075,
+          "upstream_inference_completions_cost": 0.000652
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 256,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  },
+  "normalized": {
+    "model": "openrouter:openai/gpt-5-mini",
+    "provider": "openrouter",
+    "text": "",
+    "toolCalls": [
+      {
+        "id": "call_RNlDQAYNSe8XTfO2aXrMrLgr",
+        "name": "gateway_structured_output",
+        "args": {
+          "count": 7,
+          "label": "strict-forwarding"
+        }
+      }
+    ],
+    "stopReason": "tool_use",
+    "usage": {
+      "inputTokens": 163,
+      "outputTokens": 326,
+      "totalTokens": 489,
+      "reasoningTokens": 256,
+      "cachedInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "attempts": 1,
+    "failedOver": false,
+    "structured": {
+      "data": {
+        "count": 7,
+        "label": "strict-forwarding"
+      },
+      "mode": "tool",
+      "strippedConstraints": [],
+      "repairAttempts": 0
+    }
+  }
+}

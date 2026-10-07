@@ -1,0 +1,159 @@
+{
+  "capturedAt": "2026-10-07T18:04:38.265Z",
+  "provider": "openai",
+  "model": "gpt-5-mini",
+  "request": {
+    "url": "https://api.openai.com/v1/chat/completions",
+    "method": "POST",
+    "body": {
+      "model": "gpt-5-mini",
+      "max_completion_tokens": 1024,
+      "messages": [
+        {
+          "role": "user",
+          "content": "Hi there—or whoever is reading this, I suppose you'll tell me everything is working as intended, but please start by saying hello and explaining what you can do. I ordered the OrbitMesh Mini router and the NightOwl indoor camera because the product page made the setup sound painless; I nearly bought the OrbitMesh Pro instead and now rather wish I had. The router drops the connection every twenty minutes unless I reboot it, while the camera sometimes records a perfectly empty room but misses people walking through it, although yesterday both behaved for nearly an hour so maybe I'm somehow doing this wrong. I've already swapped cables, reset everything twice, moved the router, reinstalled the app, and read three support articles that mostly repeat each other. I also paid £4.99 for next-day delivery that arrived on a Tuesday. I paid £89.99 for the pair and want it back, unless there is an actual fix that does not involve spending another evening rebuilding my network. This has been a fantastic use of my weekend—thanks, honestly."
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "record_ticket",
+            "description": "Extract the customer support ticket into the required structured fields.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "summary": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "sentiment": {
+                  "type": "string",
+                  "enum": [
+                    "angry",
+                    "neutral",
+                    "pleased"
+                  ]
+                },
+                "urgency": {
+                  "type": "integer",
+                  "enum": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                "products": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "issue": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "issue"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "refundAsk": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "summary",
+                "sentiment",
+                "urgency",
+                "products",
+                "refundAsk"
+              ],
+              "additionalProperties": false
+            },
+            "strict": true
+          }
+        }
+      ],
+      "tool_choice": {
+        "type": "function",
+        "function": {
+          "name": "record_ticket"
+        }
+      },
+      "parallel_tool_calls": false
+    }
+  },
+  "response": {
+    "status": 200,
+    "requestId": "req_7058eb913efa4b0282ce653fdc147817",
+    "body": {
+      "id": "chatcmpl-EWQI9ve068YofCTsZxEu8mLNiH3OI",
+      "object": "chat.completion",
+      "created": 1791396269,
+      "model": "gpt-5-mini-2025-08-07",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "",
+            "refusal": null,
+            "annotations": []
+          },
+          "finish_reason": "length"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 397,
+        "completion_tokens": 1024,
+        "total_tokens": 1421,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 1024,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "service_tier": "default",
+      "system_fingerprint": null
+    }
+  },
+  "observation": {
+    "finishReason": "length",
+    "refusal": null,
+    "observedCalls": 0,
+    "usage": {
+      "prompt_tokens": 397,
+      "completion_tokens": 1024,
+      "total_tokens": 1421,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "audio_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 1024,
+        "audio_tokens": 0,
+        "accepted_prediction_tokens": 0,
+        "rejected_prediction_tokens": 0
+      }
+    }
+  }
+}

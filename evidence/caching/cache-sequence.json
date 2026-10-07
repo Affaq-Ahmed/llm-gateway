@@ -1,0 +1,27 @@
+{
+  "source": "week2-scratch/caching/logs/happy.json",
+  "model": "claude-sonnet-4-5",
+  "calls": [
+    {
+      "label": "initial write",
+      "inputTokens": 20,
+      "cacheCreationInputTokens": 2980,
+      "cacheReadInputTokens": 0,
+      "outputTokens": 160
+    },
+    {
+      "label": "cache read",
+      "inputTokens": 18,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 2980,
+      "outputTokens": 88
+    },
+    {
+      "label": "mutated-prefix write",
+      "inputTokens": 17,
+      "cacheCreationInputTokens": 2981,
+      "cacheReadInputTokens": 0,
+      "outputTokens": 160
+    }
+  ]
+}

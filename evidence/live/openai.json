@@ -1,0 +1,75 @@
+{
+  "capturedAt": "2026-10-07T18:03:12.851Z",
+  "provider": "openai",
+  "model": "gpt-5-mini",
+  "request": {
+    "url": "https://api.openai.com/v1/chat/completions",
+    "method": "POST",
+    "body": {
+      "model": "gpt-5-mini",
+      "messages": [
+        {
+          "role": "user",
+          "content": "In one sentence, explain why a circuit breaker should ignore malformed-request errors."
+        }
+      ],
+      "max_completion_tokens": 4000
+    }
+  },
+  "response": {
+    "status": 200,
+    "requestId": "req_aa7cde85d98e43abb3a941afa8b274d3",
+    "body": {
+      "id": "chatcmpl-EWQGtAgltgg1woL4bJveSLzvYJvt1",
+      "object": "chat.completion",
+      "created": 1791396191,
+      "model": "gpt-5-mini-2025-08-07",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "A circuit breaker should ignore malformed-request errors because they indicate client-side/request problems rather than downstream service failures, and counting them would falsely inflate failure metrics and cause unnecessary tripping.",
+            "refusal": null,
+            "annotations": []
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 21,
+        "completion_tokens": 172,
+        "total_tokens": 193,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "audio_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 128,
+          "audio_tokens": 0,
+          "accepted_prediction_tokens": 0,
+          "rejected_prediction_tokens": 0
+        }
+      },
+      "service_tier": "default",
+      "system_fingerprint": null
+    }
+  },
+  "normalized": {
+    "model": "openai:gpt-5-mini",
+    "provider": "openai",
+    "text": "A circuit breaker should ignore malformed-request errors because they indicate client-side/request problems rather than downstream service failures, and counting them would falsely inflate failure metrics and cause unnecessary tripping.",
+    "toolCalls": [],
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 21,
+      "outputTokens": 172,
+      "totalTokens": 193,
+      "reasoningTokens": 128,
+      "cachedInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "attempts": 1,
+    "failedOver": false
+  }
+}

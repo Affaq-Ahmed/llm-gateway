@@ -1,0 +1,10 @@
+{
+  "source": "week2-scratch/caching/logs/trap.json",
+  "model": "claude-sonnet-4-5",
+  "calls": [
+    { "cacheCreationInputTokens": 3005, "cacheReadInputTokens": 0 },
+    { "cacheCreationInputTokens": 3005, "cacheReadInputTokens": 0 },
+    { "cacheCreationInputTokens": 3005, "cacheReadInputTokens": 0 }
+  ],
+  "explanation": "A changing timestamp inside the marked prefix changed its hash on every call."
+}

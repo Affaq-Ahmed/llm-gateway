@@ -1,0 +1,14 @@
+{
+  "source": "week2-scratch/caching/logs/tools.json",
+  "model": "claude-sonnet-4-5",
+  "minimumCacheableTokens": 1024,
+  "withoutTools": 30,
+  "withOriginalTools": 763,
+  "originalToolIncrement": 733,
+  "originalCacheableAlone": false,
+  "expandedPrefix": {
+    "initialWriteTokens": 3849,
+    "repeatedReadTokens": 3849,
+    "changedDescriptionWriteTokens": 3854
+  }
+}

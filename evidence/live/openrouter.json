@@ -1,0 +1,101 @@
+{
+  "capturedAt": "2026-10-07T18:03:16.745Z",
+  "provider": "openrouter",
+  "model": "openai/gpt-5-mini",
+  "request": {
+    "url": "https://openrouter.ai/api/v1/chat/completions",
+    "method": "POST",
+    "body": {
+      "model": "openai/gpt-5-mini",
+      "messages": [
+        {
+          "role": "user",
+          "content": "In one sentence, explain why a circuit breaker should ignore malformed-request errors."
+        }
+      ],
+      "max_completion_tokens": 4000
+    }
+  },
+  "response": {
+    "status": 200,
+    "requestId": null,
+    "body": {
+      "id": "gen-1791396193-EEjFLJxftFaatZquUrFU",
+      "object": "chat.completion",
+      "created": 1791396193,
+      "model": "openai/gpt-5-mini",
+      "provider": "OpenAI",
+      "system_fingerprint": null,
+      "service_tier": "default",
+      "choices": [
+        {
+          "index": 0,
+          "logprobs": null,
+          "finish_reason": "stop",
+          "native_finish_reason": "completed",
+          "message": {
+            "role": "assistant",
+            "content": "Because malformed-request errors are caused by client-side input problems rather than downstream service failures, counting them would produce false positives and unnecessarily trip the circuit.",
+            "refusal": null,
+            "reasoning": "**Explaining circuit breaker behavior**\n\nI need to formulate a clear sentence explaining why a circuit breaker should ignore malformed-request errors. The circuit breaker pattern is designed to trip on failures that indicate an unhealthy downstream service. However, malformed-request errors stem from client input issues, not service unavailability. Therefore, counting them could lead to false positives and unnecessarily trip the breaker on healthy services. A compact way to phrase it would be: \"Counting malformed-request errors is misleading as they indicate client-side faults, not service failure.\"",
+            "reasoning_details": [
+              {
+                "type": "reasoning.summary",
+                "summary": "**Explaining circuit breaker behavior**\n\nI need to formulate a clear sentence explaining why a circuit breaker should ignore malformed-request errors. The circuit breaker pattern is designed to trip on failures that indicate an unhealthy downstream service. However, malformed-request errors stem from client input issues, not service unavailability. Therefore, counting them could lead to false positives and unnecessarily trip the breaker on healthy services. A compact way to phrase it would be: \"Counting malformed-request errors is misleading as they indicate client-side faults, not service failure.\"",
+                "format": "openai-responses-v1",
+                "index": 0
+              },
+              {
+                "type": "reasoning.encrypted",
+                "data": "gAAAAABqxolkyrGYgiGtBcpieXblmvRUirHizA4sbzXOZj2U5NO76-vjDbbxsPPUsKjaz7cR6UzrFms6Te29jV4M2VG1C0vFoCJTtFlsoatWEMeRIKElYQArNr-4BCNnZ4HogsBKIhLMmwa7raD_rFGwxnXc5JtaPfm9exrFPRjgPBZXJIduuwleloDk0eIn9LL72K8yEX-Xa4spKPQim7X5dUJBZew6u0Jc4EBiGoz10aW4BhqYJ8YzmfLSqX92mbq042SYK1_v4NIP7Bq248BprrXM8kQJXPipS-Hi32ypE2ye8jHmaUSthV7SW-poVobA7iKCQgUtX6hoywAPgybtqwQgwGdoQub_aWwokv_4iEXt2tdNR-2kvFUuu_S52_iwAsCs7fon0VdWJVH5Qbx5TDsAtinna_ny3vd1Eg5TW36YKL6NA8x9aovlNDcCjeojskc11rIvTkRxoX8sGlZgn5qWhTpH_Hs904XWkgMh1l74e32am_YpKfudM1Hk0dh8c9MfdI4JGEpilsKgJ9R-D4Q30EPptmPrkmsGKA3wbAziTsVXYt4EoC3hQ2udvVjxm7zwUE810UK8mk65NwD5pvqdjVcZZdyvnfH6oFWhG-RFDBElsF9NEv9-u3KV1G0grqRxQJw97cBT1XbL9k4XPGs-wjqGjuRHGOUu7Xxl-fEYwMY0IUol9OYSrUU4S09MGSk8fJcs4EIiISYoEtFljGv0aMxHQwsoUG-BqOwill_yXt-zHUbSTUHk35oFyE1pS8iWzIkPRnfi4WKAANVtHpFNTuKz76kS7EMrFosbPONfpQ49XIaQB4FeHlkJM6T4HJwDJo58eSgnlORlQulzs8Cylq044sYa5VsT2apLy8n--vpzomwEtq8QfM-PfzvC0tzxzAQaOh_f0d3MxGF3bpKYaFdHU4S0s_xSu4BRSOMPCanRESCB7WIGoa-mjC0sUqagUDXJbEz8SmUNmlkNCIyDaJmOdzVmARrVFZiEp0le95InFxSZCI7FyvOlW1BD-o9unNvWeg-4bGUuwUsYD4zUzyKgNjGLR_2Yn2HULpBtm1M6YQj7okdLq5mBTJhlLzHaA_uUs78EXLZgji1leaC7fyjSISVm-gY7y4_9E7oyhm8XSIQEihUMWcvCeO-dVtsJXiKQAhn42JqoSOuPcd4GHtQhLe3l0GEZTlQZNUmTB4cY42N8RaczZLbJZt_lkpVuSdPWBI6rxWHiFvjHRYCZvo3BxlOdJ3DRf-dUpudbM5hcQxywHUBdZeKV5XLoUI1_aWhPM4UW9LpA2-ZGb6xXdsAPJ3KtF7-2-DCBhr1OBiNYRlxbk-AxZ019LnHpTB5_iCOG1zH5_l-vOmZBObCCZNuu53yxevbBHEy5_fRR2Ezg2M1h2c_9e68nKJB0kVAaCN_KcVXngcuCAXjVYSAfFoLiUdxTDJr4iDAWjl87DJeN_0LPpeCBFT6phB8zwx1HC2Um5b6N3esaGmkArlw4S6KMkgYZzpQOyLuqir3w_Y0_PMnAqB1YLheT4ygyIB_7L1jxVDSTa0DUx_v0ESZs8iZS3_WehspNr2SubU4DzhIv5lAPYa5lDNut3BGGfohnWIhLN7-gSchpFw91zoZ566BeBwIKpEyRiWEJONYCl7iu0AEJDy7eSErp3YOfzjZIT2By8dn4G_iSE9Al6XcUrnW8UUDgEBTaU8EByV6X_o_Ask3W2ENHVrJwlvgYbKbnDU6X5u--6t5hDZMiNzRjI_jt0mE35hsgpLb879e5ALHO2rH31QsN7eFBOT9njmkN_gwixu6N47GWaM3rhko84KN-lJK4btAdvilECHAMvw_OSiV04lkh_o2JCdvbxUviRhMFVTTfLbTOHv-MSJUtgoT-KYPdda6yPWV-tyQi5bj6tqVyl6SLlrzinNBT2S6QfEiIb3zZ-VvN_crLlhUyAznFooIyb3lx-9vWQdBSWTbGNbojq_0tXtcdXofsqdps4NtXWl9caA7H57fBC6y7oBfmsitXKgufceGZYmKbKhuZFmXlM2AGHLMi-tXvhYkjZPtBxLaQ5UTwcz-R2JgrT8vdx7VRy42ZQgZttl7OG0FVkl426YzFnb9Nxgsw1fXXxEH-1jJEqucj__zct4InM7CNBfnVQIYkAeKArflwBIUK959w7c4U-EnYunwYvpOnHDQtl_MwItjmJrO0KVidjuNuGrVvrEsv0N920OIEAV1926M_8gsJzmRRjQQ2b9PvMlCS8CQxZfxrk7uZbJwV9ZA6va6CrdTG5c4vnpaPXbvTGIq-gicRVz7Ox-jFVEqhLkmTI5h8gFMu3P7Q1u08R4AmowF3FAS8JDuuXJjQxVg_79YGymNjHUpiNwn5EXMw93gPgJpeSvHA8c7I0awNJOq7Ce_yBqww5cVAT5Q_MaXZcQFDMnf0FrIHEhhBaIb7axLdc2Lc5bl0Fd1y5Wviq-cxce83kMZJFUd6L9JO7Cyp2z-ejT4e8oMORIPH_9Tkwrs8RdCYXAx0jBh_OAi2UK5KBg==.eyJlbmRwb2ludF9zbHVnIjoib3BlbmFpL2dwdC01LW1pbmktMjAyNS0wOC0wN3xvcGVuYWkifQ",
+                "format": "openai-responses-v1",
+                "id": "rs_022b6523c113e5c4016ac689624ac087d1ad4bb0a69de61077",
+                "index": 1
+              }
+            ]
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 21,
+        "completion_tokens": 185,
+        "total_tokens": 206,
+        "cost": 0.00037525,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00037525,
+          "upstream_inference_prompt_cost": 0.00000525,
+          "upstream_inference_completions_cost": 0.00037
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 128,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  },
+  "normalized": {
+    "model": "openrouter:openai/gpt-5-mini",
+    "provider": "openrouter",
+    "text": "Because malformed-request errors are caused by client-side input problems rather than downstream service failures, counting them would produce false positives and unnecessarily trip the circuit.",
+    "toolCalls": [],
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 21,
+      "outputTokens": 185,
+      "totalTokens": 206,
+      "reasoningTokens": 128,
+      "cachedInputTokens": 0,
+      "cacheCreationInputTokens": 0
+    },
+    "attempts": 1,
+    "failedOver": false
+  }
+}
