@@ -30,7 +30,7 @@ export function withResilience(
     name: provider.name,
     supports: (feature) => provider.supports(feature),
 
-    async complete(request, activity) {
+    async complete(request, options) {
       const deadline = startTimeout(provider.name, "deadline", policy.deadlineMs);
       try {
         return await withRetry(
@@ -49,9 +49,10 @@ export function withResilience(
               const response = await provider.complete(
                 { ...request, signal },
                 {
+                  ...options,
                   onBytes: () => {
                     attemptTimer.clear();
-                    activity?.onBytes?.();
+                    options?.onBytes?.();
                   },
                 },
               );

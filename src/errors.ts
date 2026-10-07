@@ -1,3 +1,5 @@
+import type { ZodIssue } from "zod";
+
 export class GatewayError extends Error {
   constructor(
     readonly provider: string,
@@ -20,6 +22,36 @@ export class RateLimitError extends GatewayError {}
 export class OverloadedError extends GatewayError {}
 
 export class InvalidRequestError extends GatewayError {}
+
+export class SchemaConstraintError extends GatewayError {
+  constructor(
+    provider: string,
+    readonly constraints: readonly string[],
+  ) {
+    super(provider, null, false, false, null);
+    this.message =
+      `Unsupported schema constraints for provider=${provider}: ` +
+      constraints.join(", ");
+  }
+}
+
+export class SchemaValidationError extends GatewayError {
+  constructor(
+    provider: string,
+    readonly issues: readonly ZodIssue[],
+    cause?: unknown,
+  ) {
+    super(provider, null, false, true, null, cause);
+    this.message = `Structured output failed Zod validation for provider=${provider}`;
+  }
+}
+
+export class StructuredOutputError extends GatewayError {
+  constructor(provider: string, cause?: unknown) {
+    super(provider, null, false, true, null, cause);
+    this.message = `Provider=${provider} did not return usable structured output`;
+  }
+}
 
 export class AuthError extends GatewayError {}
 

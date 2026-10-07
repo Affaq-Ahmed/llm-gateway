@@ -1,5 +1,9 @@
 import OpenAI from "openai";
-import { GatewayError, toGatewayError } from "../errors.js";
+import {
+  GatewayError,
+  SchemaConstraintError,
+  toGatewayError,
+} from "../errors.js";
 import {
   ZERO_USAGE,
   type GatewayMessage,
@@ -13,10 +17,12 @@ import {
 import {
   type Provider,
   type ProviderFeature,
+  type StructuredExecution,
   type StreamActivityHooks,
 } from "./provider.js";
 import { observeResponseBytes } from "./stream-activity.js";
 import { timeoutFromSignal } from "../timeouts.js";
+import { STRUCTURED_TOOL_NAME } from "../structured.js";
 
 const REASONING_MIN_COMPLETION_TOKENS = 4_000;
 
@@ -42,19 +48,32 @@ export function createOpenAIProvider(
   return {
     name,
 
-    async complete(request, activity) {
+    async complete(request, completeOptions) {
+      if (
+        request.responseSchema !== undefined &&
+        completeOptions?.structured === undefined
+      ) {
+        throw new SchemaConstraintError(name, [
+          "responseSchema must be executed through createGateway",
+        ]);
+      }
       try {
-        const requestClient = activity?.onBytes === undefined
+        const requestClient = completeOptions?.onBytes === undefined
           ? client
           : createOpenAIClient(
               options,
               observeResponseBytes(
                 options.fetch ?? globalThis.fetch,
-                activity.onBytes,
+                completeOptions.onBytes,
               ),
             );
         const response = await requestClient.chat.completions.create(
-          toOpenAIRequest(request, name, options.constrainedJson ?? true),
+          toOpenAIRequest(
+            request,
+            name,
+            options.constrainedJson ?? true,
+            completeOptions?.structured,
+          ),
           request.signal === undefined ? {} : { signal: request.signal },
         );
         return fromOpenAIResponse(request, name, response);
@@ -143,6 +162,11 @@ async function* streamOpenAI(
   >();
 
   try {
+    if (request.responseSchema !== undefined) {
+      throw new SchemaConstraintError(provider, [
+        "structured streaming is not supported",
+      ]);
+    }
     const base = toOpenAIRequest(request, provider, constrainedJson);
     const stream = await client.chat.completions.create(
       { ...base, stream: true, stream_options: { include_usage: true } },
@@ -211,9 +235,10 @@ function toOpenAIRequest(
   request: GatewayRequest,
   provider: string,
   constrainedJson: boolean,
+  structured?: StructuredExecution,
 ): OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming {
   const model = modelForProvider(request, provider);
-  if (request.responseSchema !== undefined && !constrainedJson) {
+  if (structured?.mode === "constrained" && !constrainedJson) {
     throw toGatewayError(
       provider,
       400,
@@ -225,12 +250,34 @@ function toOpenAIRequest(
   if (request.system !== undefined) {
     messages.unshift({ role: "system", content: request.system });
   }
+  addOpenAIStructuredInstructions(messages, structured);
+
+  const structuredTool = structured?.mode === "tool"
+    ? {
+        type: "function" as const,
+        function: {
+          name: STRUCTURED_TOOL_NAME,
+          description: "Return the requested structured response.",
+          parameters: schemaForSdk(structured.schema),
+          strict: true,
+        },
+      }
+    : undefined;
 
   return {
     model,
     messages,
     max_completion_tokens: completionBudget(model, request.maxTokens),
-    ...(request.tools === undefined
+    ...(structuredTool !== undefined
+      ? {
+          tools: [structuredTool],
+          tool_choice: {
+            type: "function" as const,
+            function: { name: STRUCTURED_TOOL_NAME },
+          },
+          parallel_tool_calls: false,
+        }
+      : request.tools === undefined
       ? {}
       : {
           tools: request.tools.map((tool) => ({
@@ -245,19 +292,35 @@ function toOpenAIRequest(
             },
           })),
         }),
-    ...(request.responseSchema === undefined
-      ? {}
-      : {
+    ...(structured?.mode === "constrained"
+      ? {
           response_format: {
             type: "json_schema" as const,
             json_schema: {
               name: "gateway_response",
               strict: true,
-              schema: schemaForSdk(request.responseSchema),
+              schema: schemaForSdk(structured.schema),
             },
           },
-        }),
+        }
+      : {}),
   };
+}
+
+function addOpenAIStructuredInstructions(
+  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+  structured?: StructuredExecution,
+): void {
+  if (structured?.mode === "prompt") {
+    messages.unshift({
+      role: "system",
+      content:
+        `Return only JSON matching this JSON Schema: ${JSON.stringify(structured.schema)}`,
+    });
+  }
+  if (structured?.repairPrompt !== undefined) {
+    messages.push({ role: "user", content: structured.repairPrompt });
+  }
 }
 
 function toOpenAIMessages(
@@ -310,7 +373,10 @@ function fromOpenAIResponse(
     provider,
     text: choice.message.content ?? "",
     toolCalls: extractOpenAIToolCalls(choice.message),
-    stopReason: normalizeOpenAIStopReason(choice.finish_reason),
+    stopReason:
+      choice.message.refusal !== null && choice.message.refusal !== undefined
+        ? "refusal"
+        : normalizeOpenAIStopReason(choice.finish_reason),
     usage: response.usage === undefined ? ZERO_USAGE : openAIUsage(response.usage),
     attempts: 1,
     failedOver: false,

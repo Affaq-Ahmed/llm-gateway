@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { InvalidRequestError } from "../errors.js";
+import { z } from "zod";
+import { InvalidRequestError, SchemaConstraintError } from "../errors.js";
 import type { GatewayRequest } from "../types.js";
 import { createFixtureFetch } from "./fixture-fetch.test-support.js";
 import fixtures from "./fixtures/openrouter.json";
@@ -78,16 +79,14 @@ describe("OpenRouter provider", () => {
     await expect(completion).rejects.toBeInstanceOf(InvalidRequestError);
   });
 
-  it("rejects constrained JSON until OpenRouter forwarding is verified", async () => {
+  it("never silently ignores a direct structured-output request", async () => {
     const provider = createOpenRouterProvider({ apiKey: "fixture-key" });
-
-    await expect(
-      provider.complete({
-        model: "openrouter:openai/gpt-5-mini",
-        messages: [{ role: "user", content: "Return JSON" }],
-        maxTokens: 16,
-        responseSchema: { type: "object" },
-      }),
-    ).rejects.toBeInstanceOf(InvalidRequestError);
+    await expect(provider.complete({
+      model: "openrouter:openai/gpt-5-mini",
+      messages: [{ role: "user", content: "Return JSON" }],
+      maxTokens: 16,
+      responseSchema: z.object({ value: z.string() }),
+    })).rejects.toBeInstanceOf(SchemaConstraintError);
   });
+
 });

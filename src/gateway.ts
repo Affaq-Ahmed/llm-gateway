@@ -1,6 +1,7 @@
 import { Breaker, type BreakerOptions } from "./breaker.js";
 import type { Provider } from "./providers/provider.js";
 import { withResilience, type ResilienceOptions } from "./resilience.js";
+import { withStructuredOutputs } from "./structured.js";
 import {
   Router,
   tiers as defaultTiers,
@@ -11,7 +12,10 @@ import {
 import type { GatewayResponse, StreamEvent } from "./types.js";
 
 export type Gateway = {
-  complete(input: GatewayInput, tier?: string): Promise<GatewayResponse>;
+  complete<T>(
+    input: GatewayInput<T>,
+    tier?: string,
+  ): Promise<GatewayResponse<T>>;
   stream(
     input: GatewayInput,
     options?: GatewayStreamOptions,
@@ -29,7 +33,7 @@ export type CreateGatewayOptions = {
 export function createGateway(options: CreateGatewayOptions): Gateway {
   const router = new Router({
     providers: options.providers.map((provider) =>
-      withResilience(provider, options.resilience),
+      withStructuredOutputs(withResilience(provider, options.resilience)),
     ),
     tiers: options.tiers ?? defaultTiers,
     ...(options.breaker === undefined ? {} : { breaker: options.breaker }),

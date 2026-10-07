@@ -1,5 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { GatewayError, toGatewayError } from "../errors.js";
+import {
+  GatewayError,
+  SchemaConstraintError,
+  toGatewayError,
+} from "../errors.js";
 import type {
   CacheHint,
   GatewayMessage,
@@ -15,10 +19,12 @@ import { ZERO_USAGE } from "../types.js";
 import {
   type Provider,
   type ProviderFeature,
+  type StructuredExecution,
   type StreamActivityHooks,
 } from "./provider.js";
 import { observeResponseBytes } from "./stream-activity.js";
 import { timeoutFromSignal } from "../timeouts.js";
+import { STRUCTURED_TOOL_NAME } from "../structured.js";
 
 const SDK_TIMEOUT_DISABLED_MS = 2_147_483_647;
 
@@ -37,19 +43,27 @@ export function createAnthropicProvider(
   return {
     name,
 
-    async complete(request, activity) {
+    async complete(request, completeOptions) {
+      if (
+        request.responseSchema !== undefined &&
+        completeOptions?.structured === undefined
+      ) {
+        throw new SchemaConstraintError(name, [
+          "responseSchema must be executed through createGateway",
+        ]);
+      }
       try {
-        const requestClient = activity?.onBytes === undefined
+        const requestClient = completeOptions?.onBytes === undefined
           ? client
           : createAnthropicClient(
               options,
               observeResponseBytes(
                 options.fetch ?? globalThis.fetch,
-                activity.onBytes,
+                completeOptions.onBytes,
               ),
             );
         const response = await requestClient.messages.create(
-          toAnthropicRequest(request),
+          toAnthropicRequest(request, completeOptions?.structured),
           request.signal === undefined ? {} : { signal: request.signal },
         );
         return fromAnthropicResponse(request, response);
@@ -131,6 +145,11 @@ async function* streamAnthropic(
   >();
 
   try {
+    if (request.responseSchema !== undefined) {
+      throw new SchemaConstraintError("anthropic", [
+        "structured streaming is not supported",
+      ]);
+    }
     const stream = await client.messages.create(
       { ...toAnthropicRequest(request), stream: true },
       { signal },
@@ -243,18 +262,33 @@ function mergeAnthropicStreamUsage(
 
 function toAnthropicRequest(
   request: GatewayRequest,
+  structured?: StructuredExecution,
 ): Anthropic.MessageCreateParamsNonStreaming {
   const model = modelForAnthropic(request);
-  const tools = toAnthropicTools(request);
+  const tools = structured?.mode === "tool"
+    ? [{
+        name: STRUCTURED_TOOL_NAME,
+        description: "Return the requested structured response.",
+        input_schema: {
+          ...schemaForSdk(structured.schema),
+          type: "object" as const,
+        },
+        strict: true,
+      }]
+    : toAnthropicTools(request);
   const cacheSystem = request.cacheHint !== undefined && tools === undefined;
+  const messages = toAnthropicMessages(
+    request.messages,
+    cacheSystem && request.system === undefined ? request.cacheHint : undefined,
+  );
+  if (structured?.repairPrompt !== undefined) {
+    messages.push({ role: "user", content: structured.repairPrompt });
+  }
 
   return {
     model,
     max_tokens: request.maxTokens,
-    messages: toAnthropicMessages(
-      request.messages,
-      cacheSystem && request.system === undefined ? request.cacheHint : undefined,
-    ),
+    messages,
     ...(request.system === undefined
       ? {}
       : {
@@ -269,16 +303,24 @@ function toAnthropicRequest(
             : request.system,
         }),
     ...(tools === undefined ? {} : { tools }),
-    ...(request.responseSchema === undefined
-      ? {}
-      : {
+    ...(structured?.mode === "tool"
+      ? { tool_choice: { type: "tool" as const, name: STRUCTURED_TOOL_NAME } }
+      : {}),
+    ...(structured?.mode === "constrained"
+      ? {
           output_config: {
             format: {
               type: "json_schema" as const,
-              schema: schemaForSdk(request.responseSchema),
+              schema: schemaForSdk(structured.schema),
             },
           },
-        }),
+        }
+      : {}),
+    ...(structured?.mode === "prompt"
+      ? {
+          system: `${request.system === undefined ? "" : `${request.system}\n\n`}Return only JSON matching this JSON Schema: ${JSON.stringify(structured.schema)}`,
+        }
+      : {}),
   };
 }
 
@@ -388,6 +430,7 @@ function normalizeAnthropicStopReason(
   if (reason === "end_turn") return "end_turn";
   if (reason === "tool_use") return "tool_use";
   if (reason === "max_tokens") return "max_tokens";
+  if (reason === "refusal") return "refusal";
   return "unknown";
 }
 

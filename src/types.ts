@@ -1,3 +1,5 @@
+import type { ZodType } from "zod";
+
 export type ModelId = `${string}:${string}`;
 
 export type JsonValue =
@@ -44,13 +46,25 @@ export type CacheHint = {
   readonly ttl?: "5m" | "1h";
 };
 
-export type GatewayRequest = {
+export type StructuredMode = "constrained" | "tool" | "prompt";
+export type SchemaPolicy = "strict" | "relax";
+
+export type StructuredOutput<T> = {
+  readonly data: T;
+  readonly mode: StructuredMode;
+  readonly strippedConstraints: readonly string[];
+  readonly repairAttempts: number;
+};
+
+export type GatewayRequest<T = unknown> = {
   readonly model: ModelId;
   readonly messages: readonly GatewayMessage[];
   readonly system?: string;
   readonly maxTokens: number;
   readonly tools?: readonly ToolDefinition[];
-  readonly responseSchema?: JsonSchema;
+  readonly responseSchema?: ZodType<T>;
+  readonly structuredMode?: StructuredMode | "auto";
+  readonly schemaPolicy?: SchemaPolicy;
   readonly cacheHint?: CacheHint;
   readonly traceId?: string;
   readonly signal?: AbortSignal;
@@ -78,9 +92,14 @@ export const ZERO_USAGE = Object.freeze({
   cacheCreationInputTokens: 0,
 }) satisfies ZeroUsage;
 
-export type StopReason = "end_turn" | "tool_use" | "max_tokens" | "unknown";
+export type StopReason =
+  | "end_turn"
+  | "tool_use"
+  | "max_tokens"
+  | "refusal"
+  | "unknown";
 
-export type GatewayResponse = {
+export type GatewayResponse<T = unknown> = {
   readonly model: ModelId;
   readonly provider: string;
   readonly text: string;
@@ -89,6 +108,7 @@ export type GatewayResponse = {
   readonly usage: Usage;
   readonly attempts: number;
   readonly failedOver: boolean;
+  readonly structured?: StructuredOutput<T>;
 };
 
 export type StreamEvent =

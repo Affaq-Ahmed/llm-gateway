@@ -1,0 +1,14 @@
+{
+  "source": "week2-scratch/LEAKS.md Finding 3; the original failing response fixture was overwritten by the later 4000-token clean replay",
+  "finishReason": "length",
+  "refusal": null,
+  "observedCalls": [],
+  "usage": {
+    "inputTokens": 403,
+    "outputTokens": 1024,
+    "totalTokens": 1427,
+    "reasoningTokens": 1024,
+    "cachedInputTokens": 0,
+    "cacheCreationInputTokens": 0
+  }
+}

@@ -1,6 +1,8 @@
 import type {
   GatewayRequest,
   GatewayResponse,
+  JsonSchema,
+  StructuredMode,
   StreamEvent,
 } from "../types.js";
 
@@ -11,11 +13,21 @@ export type StreamActivityHooks = {
   readonly onContent?: () => void;
 };
 
+export type StructuredExecution = {
+  readonly mode: StructuredMode;
+  readonly schema: JsonSchema;
+  readonly repairPrompt?: string;
+};
+
+export type ProviderCompleteOptions = Pick<StreamActivityHooks, "onBytes"> & {
+  readonly structured?: StructuredExecution;
+};
+
 export interface Provider {
   readonly name: string;
   complete(
     request: GatewayRequest,
-    activity?: Pick<StreamActivityHooks, "onBytes">,
+    options?: ProviderCompleteOptions,
   ): Promise<GatewayResponse>;
   stream(
     request: GatewayRequest,

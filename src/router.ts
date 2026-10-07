@@ -24,7 +24,7 @@ export type TierMap = Readonly<
   Record<string, Readonly<Record<string, string>>>
 >;
 
-export type GatewayInput = Omit<GatewayRequest, "model">;
+export type GatewayInput<T = unknown> = Omit<GatewayRequest<T>, "model">;
 
 export type GatewayStreamOptions = {
   readonly tier?: string;
@@ -51,10 +51,10 @@ export class Router {
     this.breakers = options.breakers ?? new Map();
   }
 
-  async complete(
-    input: GatewayInput,
+  async complete<T>(
+    input: GatewayInput<T>,
     tier = "fast",
-  ): Promise<GatewayResponse> {
+  ): Promise<GatewayResponse<T>> {
     const errors: GatewayError[] = [];
 
     for (const [index, provider] of this.providers.entries()) {
@@ -68,7 +68,7 @@ export class Router {
           ...response,
           provider: provider.name,
           failedOver: index > 0,
-        };
+        } as GatewayResponse<T>;
       } catch (error) {
         const gatewayError = asGatewayError(provider.name, error);
         errors.push(gatewayError);

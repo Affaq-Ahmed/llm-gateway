@@ -16,6 +16,9 @@ import {
   createGateway,
   createOpenAIProvider,
 } from "@affaqahmed/llm-gateway";
+import { z } from "zod";
+
+const Answer = z.object({ answer: z.string().max(80) });
 
 const gateway = createGateway({
   providers: [createAnthropicProvider(), createOpenAIProvider()],
@@ -32,15 +35,24 @@ const response = await gateway.complete({
   system: "Be concise.",
   maxTokens: 16,
   traceId: "readme-quickstart",
+  responseSchema: Answer,
 }, "fast");
 
 console.log(response.text, response.provider, response.failedOver);
 console.log(response.usage.totalTokens, response.attempts);
+console.log(response.structured?.data.answer, response.structured?.mode);
 ```
 
-The input also accepts provider-neutral tool definitions, a JSON response
+The input also accepts provider-neutral tool definitions, a Zod response
 schema, ephemeral cache hints, a trace ID, and an `AbortSignal`. Direct adapter
 calls still use `GatewayRequest` and provider-qualified `"provider:model"` IDs.
+
+Structured outputs use three explicit modes. Anthropic and OpenAI use their
+constrained JSON features by default; OpenRouter uses one forced tool call.
+Callers may force `structuredMode: "prompt"`. Every mode is validated by the
+original Zod schema. `schemaPolicy: "strict"` rejects Anthropic integer bounds
+before making a request, while `"relax"` removes those unsupported wire
+keywords, reports them in `strippedConstraints`, and keeps Zod enforcement.
 
 ## Providers
 

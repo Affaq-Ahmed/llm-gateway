@@ -1,0 +1,4 @@
+{
+  "source": "week2-scratch/fixtures/structured/anthropic-L3-0-response.json",
+  "text": "{\"summary\":\"Customer received defective OrbitMesh Mini router and NightOwl camera with connection/detection issues, has exhausted troubleshooting steps, and requests £89.99 refund unless a solution exists.\",\"sentiment\":\"angry\",\"urgency\":5,\"products\":[{\"name\":\"OrbitMesh Mini router\",\"issue\":\"Connection drops every twenty minutes requiring reboot\"},{\"name\":\"NightOwl indoor camera\",\"issue\":\"Inconsistent recording, misses people while sometimes recording empty rooms\"}],\"refundAsk\":89.99}"
+}

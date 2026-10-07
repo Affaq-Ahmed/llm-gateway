@@ -10,5 +10,6 @@ export * from "./providers/provider.js";
 export * from "./resilience.js";
 export * from "./retry.js";
 export * from "./router.js";
+export * from "./structured.js";
 export * from "./timeouts.js";
 export * from "./types.js";
