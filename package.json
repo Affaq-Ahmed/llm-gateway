@@ -1,6 +1,6 @@
 {
   "name": "@affaqahmed/llm-gateway",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Provider-neutral LLM gateway for Anthropic, OpenAI, and OpenRouter: normalized streaming, structured outputs, retries, failover with an explicit stream commit point, and cache-aware cost telemetry.",
   "keywords": [
     "llm",
