@@ -313,6 +313,7 @@ function fromOpenAIResponse(
     stopReason: normalizeOpenAIStopReason(choice.finish_reason),
     usage: response.usage === undefined ? ZERO_USAGE : openAIUsage(response.usage),
     attempts: 1,
+    failedOver: false,
   };
 }
 

@@ -88,6 +88,7 @@ export type GatewayResponse = {
   readonly stopReason: StopReason;
   readonly usage: Usage;
   readonly attempts: number;
+  readonly failedOver: boolean;
 };
 
 export type StreamEvent =

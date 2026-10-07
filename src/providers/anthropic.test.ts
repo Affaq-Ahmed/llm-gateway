@@ -53,6 +53,7 @@ describe("Anthropic provider", () => {
         cacheCreationInputTokens: 64,
       },
       attempts: 1,
+      failedOver: false,
     });
     expect(provider.supports("cacheControl")).toBe(true);
     expect(provider.supports("constrainedJson")).toBe(true);

@@ -378,6 +378,7 @@ function fromAnthropicResponse(
     stopReason: normalizeAnthropicStopReason(response.stop_reason),
     usage: anthropicUsage(response.usage),
     attempts: 1,
+    failedOver: false,
   };
 }
 
