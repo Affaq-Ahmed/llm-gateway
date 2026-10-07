@@ -54,6 +54,7 @@ describe("OpenAI provider", () => {
         cachedInputTokens: 32,
         cacheCreationInputTokens: 0,
       },
+      attempts: 1,
     });
     expect(provider.supports("cacheControl")).toBe(false);
     expect(provider.supports("constrainedJson")).toBe(true);

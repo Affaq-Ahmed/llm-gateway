@@ -50,6 +50,7 @@ describe("OpenRouter provider", () => {
         cachedInputTokens: 0,
         cacheCreationInputTokens: 0,
       },
+      attempts: 1,
     });
     expect(provider.supports("cacheControl")).toBe(false);
     expect(provider.supports("constrainedJson")).toBe(false);

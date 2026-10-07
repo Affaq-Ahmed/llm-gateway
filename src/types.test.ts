@@ -33,11 +33,13 @@ describe("public gateway types", () => {
         cachedInputTokens: 0,
         cacheCreationInputTokens: 0,
       },
+      attempts: 1,
     } satisfies GatewayResponse;
 
     expectTypeOf(request.model).toMatchTypeOf<ModelId>();
     expectTypeOf(response.usage).toMatchTypeOf<Usage>();
     expectTypeOf<GatewayResponse>().toMatchTypeOf<{ usage: Usage }>();
+    expectTypeOf<GatewayResponse>().toMatchTypeOf<{ attempts: number }>();
     expectTypeOf<Extract<StreamEvent, { type: "error" }>["usage"]>()
       .toEqualTypeOf<ZeroUsage>();
     expect(response.usage.totalTokens).toBe(13);

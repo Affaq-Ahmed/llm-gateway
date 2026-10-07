@@ -18,11 +18,13 @@ import {
   type StreamActivityHooks,
 } from "./provider.js";
 import { observeResponseBytes } from "./stream-activity.js";
+import { timeoutFromSignal } from "../timeouts.js";
 
 const SDK_TIMEOUT_DISABLED_MS = 2_147_483_647;
 
 export type AnthropicProviderOptions = {
   readonly apiKey?: string;
+  readonly baseURL?: string;
   readonly fetch?: typeof fetch;
 };
 
@@ -35,14 +37,27 @@ export function createAnthropicProvider(
   return {
     name,
 
-    async complete(request) {
+    async complete(request, activity) {
       try {
-        const response = await client.messages.create(
+        const requestClient = activity?.onBytes === undefined
+          ? client
+          : createAnthropicClient(
+              options,
+              observeResponseBytes(
+                options.fetch ?? globalThis.fetch,
+                activity.onBytes,
+              ),
+            );
+        const response = await requestClient.messages.create(
           toAnthropicRequest(request),
           request.signal === undefined ? {} : { signal: request.signal },
         );
         return fromAnthropicResponse(request, response);
       } catch (error) {
+        const timeout = request.signal === undefined
+          ? undefined
+          : timeoutFromSignal(request.signal);
+        if (timeout !== undefined) throw timeout;
         if (error instanceof GatewayError) throw error;
         if (error instanceof Anthropic.APIError) {
           throw toGatewayError(
@@ -83,6 +98,7 @@ function createAnthropicClient(
     maxRetries: 0,
     timeout: SDK_TIMEOUT_DISABLED_MS,
     ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+    ...(options.baseURL === undefined ? {} : { baseURL: options.baseURL }),
     ...(fetchOverride === undefined
       ? options.fetch === undefined
         ? {}
@@ -166,6 +182,9 @@ async function* streamAnthropic(
       }
     }
 
+    const timeout = timeoutFromSignal(signal);
+    if (timeout !== undefined) throw timeout;
+
     for (const tool of tools.values()) {
       yield {
         type: "tool_call",
@@ -177,13 +196,14 @@ async function* streamAnthropic(
             : parseAnthropicArguments(tool.argumentsJson),
       };
     }
-    yield { type: "done", stopReason, usage, ttftMs };
+    yield { type: "done", stopReason, usage, ttftMs, attempts: 1 };
   } catch (error) {
-    const mapped = error instanceof GatewayError
+    const timeout = timeoutFromSignal(signal);
+    const mapped = timeout ?? (error instanceof GatewayError
       ? error
       : error instanceof Anthropic.APIError
         ? toGatewayError("anthropic", error.status ?? null, error.headers, error)
-        : toGatewayError("anthropic", null, undefined, error);
+        : toGatewayError("anthropic", null, undefined, error));
     yield { type: "error", error: mapped, usage: ZERO_USAGE };
   } finally {
     controller.abort();
@@ -357,6 +377,7 @@ function fromAnthropicResponse(
     toolCalls,
     stopReason: normalizeAnthropicStopReason(response.stop_reason),
     usage: anthropicUsage(response.usage),
+    attempts: 1,
   };
 }
 

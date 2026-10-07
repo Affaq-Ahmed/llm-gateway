@@ -13,7 +13,10 @@ export type StreamActivityHooks = {
 
 export interface Provider {
   readonly name: string;
-  complete(request: GatewayRequest): Promise<GatewayResponse>;
+  complete(
+    request: GatewayRequest,
+    activity?: Pick<StreamActivityHooks, "onBytes">,
+  ): Promise<GatewayResponse>;
   stream(
     request: GatewayRequest,
     activity?: StreamActivityHooks,

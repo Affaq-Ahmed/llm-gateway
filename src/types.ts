@@ -87,6 +87,7 @@ export type GatewayResponse = {
   readonly toolCalls: readonly ToolCall[];
   readonly stopReason: StopReason;
   readonly usage: Usage;
+  readonly attempts: number;
 };
 
 export type StreamEvent =
@@ -103,6 +104,7 @@ export type StreamEvent =
       readonly usage: Usage;
       /** Null when the stream completes without producing text (for example, tool-only output). */
       readonly ttftMs: number | null;
+      readonly attempts: number;
     }
   | {
       readonly type: "error";

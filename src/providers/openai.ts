@@ -16,6 +16,7 @@ import {
   type StreamActivityHooks,
 } from "./provider.js";
 import { observeResponseBytes } from "./stream-activity.js";
+import { timeoutFromSignal } from "../timeouts.js";
 
 const REASONING_MIN_COMPLETION_TOKENS = 4_000;
 
@@ -41,14 +42,27 @@ export function createOpenAIProvider(
   return {
     name,
 
-    async complete(request) {
+    async complete(request, activity) {
       try {
-        const response = await client.chat.completions.create(
+        const requestClient = activity?.onBytes === undefined
+          ? client
+          : createOpenAIClient(
+              options,
+              observeResponseBytes(
+                options.fetch ?? globalThis.fetch,
+                activity.onBytes,
+              ),
+            );
+        const response = await requestClient.chat.completions.create(
           toOpenAIRequest(request, name, options.constrainedJson ?? true),
           request.signal === undefined ? {} : { signal: request.signal },
         );
         return fromOpenAIResponse(request, name, response);
       } catch (error) {
+        const timeout = request.signal === undefined
+          ? undefined
+          : timeoutFromSignal(request.signal);
+        if (timeout !== undefined) throw timeout;
         if (error instanceof GatewayError) throw error;
         if (error instanceof OpenAI.APIError) {
           throw toGatewayError(
@@ -168,6 +182,9 @@ async function* streamOpenAI(
       }
     }
 
+    const timeout = timeoutFromSignal(signal);
+    if (timeout !== undefined) throw timeout;
+
     for (const tool of tools.values()) {
       yield {
         type: "tool_call",
@@ -176,13 +193,14 @@ async function* streamOpenAI(
         args: parseArguments(tool.argumentsJson),
       };
     }
-    yield { type: "done", stopReason, usage, ttftMs };
+    yield { type: "done", stopReason, usage, ttftMs, attempts: 1 };
   } catch (error) {
-    const mapped = error instanceof GatewayError
+    const timeout = timeoutFromSignal(signal);
+    const mapped = timeout ?? (error instanceof GatewayError
       ? error
       : error instanceof OpenAI.APIError
         ? toGatewayError(provider, error.status ?? null, error.headers, error)
-        : toGatewayError(provider, null, undefined, error);
+        : toGatewayError(provider, null, undefined, error));
     yield { type: "error", error: mapped, usage: ZERO_USAGE };
   } finally {
     controller.abort();
@@ -294,6 +312,7 @@ function fromOpenAIResponse(
     toolCalls: extractOpenAIToolCalls(choice.message),
     stopReason: normalizeOpenAIStopReason(choice.finish_reason),
     usage: response.usage === undefined ? ZERO_USAGE : openAIUsage(response.usage),
+    attempts: 1,
   };
 }
 
