@@ -1,8 +1,30 @@
 {
   "name": "@affaqahmed/llm-gateway",
   "version": "0.0.0",
-  "description": "A provider-agnostic gateway for large language models.",
+  "description": "Provider-neutral LLM gateway for Anthropic, OpenAI, and OpenRouter: normalized streaming, structured outputs, retries, failover with an explicit stream commit point, and cache-aware cost telemetry.",
+  "keywords": [
+    "llm",
+    "gateway",
+    "anthropic",
+    "openai",
+    "openrouter",
+    "streaming",
+    "failover",
+    "circuit-breaker",
+    "structured-output",
+    "prompt-caching"
+  ],
+  "author": "Affaq Ahmed",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Affaq-Ahmed/llm-gateway.git"
+  },
+  "homepage": "https://github.com/Affaq-Ahmed/llm-gateway#readme",
+  "bugs": {
+    "url": "https://github.com/Affaq-Ahmed/llm-gateway/issues"
+  },
+  "sideEffects": false,
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
